@@ -2355,46 +2355,42 @@ function renderGomoku() {
   gomokuCanvas.width=size; gomokuCanvas.height=size;
 
   // Board background - modern dark glass
-  // Dark board
-  gctx.fillStyle='#0b0e1a';
+  // Board: deep dark navy with subtle texture
+  gctx.fillStyle='#111827';
   gctx.fillRect(0,0,size,size);
-  // Center glow
-  const bgGlow=gctx.createRadialGradient(size/2,size/2,0,size/2,size/2,size*0.55);
-  bgGlow.addColorStop(0,'rgba(80,85,200,0.12)');
-  bgGlow.addColorStop(1,'rgba(0,0,0,0)');
-  gctx.fillStyle=bgGlow;
-  gctx.fillRect(0,0,size,size);
-  // Border glow
-  gctx.strokeStyle='rgba(99,102,241,0.4)';
-  gctx.lineWidth=1.5;
-  gctx.strokeRect(pad,pad,(gSize-1)*cell,(gSize-1)*cell);
 
-  // Grid lines
-  gctx.strokeStyle='rgba(120,125,255,0.45)';
-  gctx.lineWidth=0.7;
+  // Playable area slightly lighter
+  gctx.fillStyle='#1a2235';
+  gctx.fillRect(pad-cell*0.5, pad-cell*0.5, (gSize-1)*cell+cell, (gSize-1)*cell+cell);
+
+  // Grid lines - bright and clear
+  gctx.strokeStyle='rgba(148,163,184,0.7)';  // slate-300 70%
+  gctx.lineWidth=1;
   for(let i=0;i<gSize;i++){
     gctx.beginPath();
-    gctx.moveTo(pad+i*cell,pad);
-    gctx.lineTo(pad+i*cell,pad+(gSize-1)*cell);
+    gctx.moveTo(pad+i*cell, pad);
+    gctx.lineTo(pad+i*cell, pad+(gSize-1)*cell);
     gctx.stroke();
     gctx.beginPath();
-    gctx.moveTo(pad,pad+i*cell);
-    gctx.lineTo(pad+(gSize-1)*cell,pad+i*cell);
+    gctx.moveTo(pad, pad+i*cell);
+    gctx.lineTo(pad+(gSize-1)*cell, pad+i*cell);
     gctx.stroke();
   }
 
-  // Star points
+  // Border - bright outer frame
+  gctx.strokeStyle='rgba(148,163,184,0.9)';
+  gctx.lineWidth=1.5;
+  gctx.strokeRect(pad, pad, (gSize-1)*cell, (gSize-1)*cell);
+
+  // Star points - solid bright dots
   const stars = gSize===15 ? [[3,3],[3,11],[7,7],[11,3],[11,11]] :
                 gSize===19 ? [[3,3],[3,9],[3,15],[9,3],[9,9],[9,15],[15,3],[15,9],[15,15]] :
                 [[3,3],[3,9],[6,6],[9,3],[9,9]];
   stars.forEach(([r,c])=>{
     gctx.beginPath();
-    gctx.arc(pad+c*cell, pad+r*cell, cell*0.12, 0, Math.PI*2);
-    // star glow
-    const sg=gctx.createRadialGradient(pad+c*cell,pad+r*cell,0,pad+c*cell,pad+r*cell,cell*0.25);
-    sg.addColorStop(0,'rgba(150,155,255,0.9)');
-    sg.addColorStop(1,'rgba(99,102,241,0)');
-    gctx.fillStyle=sg; gctx.fill();
+    gctx.arc(pad+c*cell, pad+r*cell, cell*0.14, 0, Math.PI*2);
+    gctx.fillStyle='rgba(148,163,184,0.85)';
+    gctx.fill();
   });
 
   // Pieces

@@ -2340,12 +2340,17 @@ function initGomoku() {
   renderGomoku();
 }
 
+window.addEventListener('resize', () => { if(gInitialized) renderGomoku(); });
+
 const gomokuCanvas=document.getElementById('gomokuCanvas');
 const gctx=gomokuCanvas.getContext('2d');
 
 function getCellPx() {
-  const area=Math.min(window.innerWidth-300,window.innerHeight-120,600);
-  return Math.floor(area/(gSize+1));
+  const boardArea = document.getElementById('tab-gomoku');
+  const availW = (boardArea ? boardArea.offsetWidth : window.innerWidth) - 240;
+  const availH = window.innerHeight - 90;
+  const area = Math.min(availW, availH) * 0.92;
+  return Math.max(24, Math.floor(area / (gSize + 1)));
 }
 
 function renderGomoku() {

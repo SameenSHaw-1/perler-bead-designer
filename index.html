@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拼豆图纸设计器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --accent2: #f5a623;
+    --text: #eaeaea;
+    --text2: #a0a0b0;
+    --border: #2a2a4a;
+    --radius: 10px;
+    --shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  header {
+    background: linear-gradient(135deg, var(--surface2), #1a1a4e);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: var(--shadow);
+    border-bottom: 2px solid var(--accent);
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+    background: linear-gradient(90deg, #f5a623, #e94560);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  header .emoji { font-size: 2rem; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+  }
+
+  .tab-btn {
+    background: transparent;
+    border: 2px solid var(--border);
+    color: var(--text2);
+    padding: 8px 18px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    font-weight: 600;
+  }
+
+  .tab-btn:hover:not(.active) {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .main-layout {
+    display: flex;
+    height: calc(100vh - 70px);
+    overflow: hidden;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 6px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .panel {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 14px;
+    border: 1px solid var(--border);
+  }
+
+  .panel h3 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent2);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Canvas area */
+  .canvas-area {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 20px;
+    background: var(--bg);
+    position: relative;
+  }
+
+  .canvas-wrapper {
+    position: relative;
+    display: inline-block;
+    cursor: crosshair;
+  }
+
+  #mainCanvas {
+    display: block;
+    border-radius: 4px;
+    box-shadow: 0 0 40px rgba(233,69,96,0.2);
+    image-rendering: pixelated;
+  }
+
+  /* Right panel */
+  .right-panel {
+    width: 240px;
+    min-width: 240px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Controls */
+  .control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .control-row label {
+    font-size: 0.82rem;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  input[type="number"] {
+    width: 60px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    text-align: center;
+  }
+
+  select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .btn:hover { background: var(--border); border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+  .btn.primary:hover { background: #c73652; }
+  .btn.secondary { background: var(--accent2); border-color: var(--accent2); color: #1a1a2e; font-weight: 600; }
+  .btn.secondary:hover { background: #d4901f; }
+  .btn.sm { padding: 5px 10px; font-size: 0.78rem; }
+
+  .btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /* Tool buttons */
+  .tool-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .tool-btn {
+    background: var(--bg);
+    border: 2px solid var(--border);
+    color: var(--text2);
+    padding: 10px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .tool-btn .icon { font-size: 1.2rem; }
+  .tool-btn.active { border-color: var(--accent); background: rgba(233,69,96,0.15); color: var(--text); }
+  .tool-btn:hover:not(.active) { border-color: var(--accent2); color: var(--text); }
+
+  /* Color palette */
+  .color-palette {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+  }
+
+  .color-swatch {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .color-swatch:hover { transform: scale(1.2); z-index: 10; }
+  .color-swatch.selected { border-color: white; box-shadow: 0 0 0 2px var(--accent); transform: scale(1.15); }
+
+  .current-color-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .current-color-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .current-color-info {
+    font-size: 0.8rem;
+    color: var(--text2);
+  }
+
+  .current-color-info strong {
+    display: block;
+    color: var(--text);
+    font-size: 0.9rem;
+  }
+
+  /* Upload area */
+  .upload-area {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text2);
+    font-size: 0.85rem;
+  }
+
+  .upload-area:hover, .upload-area.drag-over {
+    border-color: var(--accent);
+    background: rgba(233,69,96,0.05);
+    color: var(--text);
+  }
+
+  .upload-area .upload-icon { font-size: 2.5rem; margin-bottom: 8px; }
+
+  /* BOM list */
+  .bom-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .bom-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--bg);
+    border-radius: 6px;
+    font-size: 0.82rem;
+  }
+
+  .bom-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .bom-name { flex: 1; color: var(--text2); }
+  .bom-count { font-weight: 700; color: var(--text); font-size: 0.9rem; }
+
+  /* Grid size presets */
+  .preset-row {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+
+  .preset-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    transition: all 0.15s;
+  }
+
+  .preset-btn:hover { border-color: var(--accent2); color: var(--text); }
+
+  /* Status bar */
+  .status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 6px 20px;
+    display: flex;
+    gap: 20px;
+    font-size: 0.78rem;
+    color: var(--text2);
+    z-index: 100;
+  }
+
+  .status-bar span { display: flex; align-items: center; gap: 4px; }
+
+  /* Tab content visibility */
+  .tab-content { display: none; }
+  .tab-content.active { display: flex; width: 100%; height: 100%; }
+
+  /* Zoom controls */
+  .zoom-controls {
+    position: absolute;
+    bottom: 60px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 50;
+  }
+
+  .zoom-controls button {
+    width: 36px;
+    height: 36px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .zoom-controls button:hover { background: var(--border); }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: var(--text2);
+    cursor: pointer;
+    margin-bottom: 6px;
+  }
+
+  .checkbox-row input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+  }
+
+  .separator {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 8px 0;
+  }
+
+  .tag {
+    display: inline-block;
+    background: rgba(233,69,96,0.2);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 220px; min-width: 220px; }
+    .right-panel { width: 200px; min-width: 200px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="emoji">🫘</span>
+  <h1>拼豆图纸设计器</h1>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('design')">✏️ 手动设计</button>
+    <button class="tab-btn" onclick="switchTab('convert')">🖼️ 图片转图纸</button>
+  </div>
+</header>
+
+<div class="main-layout">
+
+  <!-- ===== DESIGN TAB ===== -->
+  <div id="tab-design" class="tab-content active" style="width:100%;height:100%;display:flex;">
+
+    <!-- Left sidebar: tools & settings -->
+    <div class="sidebar">
+      
+      <!-- Grid Settings -->
+      <div class="panel">
+        <h3>⚙️ 画板设置</h3>
+        <div class="control-row">
+          <label>宽 (格)</label>
+          <input type="number" id="designWidth" value="32" min="4" max="120" style="width:65px">
+        </div>
+        <div class="control-row">
+          <label>高 (格)</label>
+          <input type="number" id="designHeight" value="32" min="4" max="120" style="width:65px">
+        </div>
+        <div class="preset-row">
+          <button class="preset-btn" onclick="setDesignSize(16,16)">16×16</button>
+          <button class="preset-btn" onclick="setDesignSize(24,24)">24×24</button>
+          <button class="preset-btn" onclick="setDesignSize(32,32)">32×32</button>
+          <button class="preset-btn" onclick="setDesignSize(48,48)">48×48</button>
+          <button class="preset-btn" onclick="setDesignSize(64,64)">64×64</button>
+        </div>
+        <hr class="separator">
+        <button class="btn primary" onclick="initDesignCanvas()" style="width:100%">🔄 应用尺寸</button>
+        <div style="height:6px"></div>
+        <button class="btn" onclick="clearDesignCanvas()" style="width:100%">🗑️ 清空画板</button>
+      </div>
+
+      <!-- Tools -->
+      <div class="panel">
+        <h3>🖌️ 工具</h3>
+        <div class="tool-grid">
+          <button class="tool-btn active" id="tool-pen" onclick="setTool('pen')">
+            <span class="icon">🖊️</span><span>画笔</span>
+          </button>
+          <button class="tool-btn" id="tool-eraser" onclick="setTool('eraser')">
+            <span class="icon">🧹</span><span>橡皮</span>
+          </button>
+          <button class="tool-btn" id="tool-fill" onclick="setTool('fill')">
+            <span class="icon">🪣</span><span>填充</span>
+          </button>
+          <button class="tool-btn" id="tool-picker" onclick="setTool('picker')">
+            <span class="icon">💉</span><span>取色</span>
+          </button>
+        </div>
+        <hr class="separator">
+        <div class="btn-row">
+          <button class="btn sm" onclick="undo()" title="Ctrl+Z">↩ 撤销</button>
+          <button class="btn sm" onclick="redo()" title="Ctrl+Y">↪ 重做</button>
+        </div>
+        <hr class="separator">
+        <div class="checkbox-row">
+          <input type="checkbox" id="showGrid" checked onchange="renderDesignCanvas()">
+          <label for="showGrid">显示网格线</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="showBeadStyle" checked onchange="renderDesignCanvas()">
+          <label for="showBeadStyle">圆形拼豆样式</label>
+        </div>
+      </div>
+
+      <!-- Color Palette -->
+      <div class="panel">
+        <h3>🎨 色板</h3>
+        <div class="current-color-display">
+          <div class="current-color-box" id="currentColorBox"></div>
+          <div class="current-color-info">
+            <strong id="currentColorName">白色</strong>
+            <span id="currentColorHex">#FFFFFF</span>
+          </div>
+        </div>
+        <div class="color-palette" id="colorPalette"></div>
+      </div>
+
+    </div>
+
+    <!-- Canvas area -->
+    <div class="canvas-area" id="designCanvasArea">
+      <div class="canvas-wrapper" id="designCanvasWrapper">
+        <canvas id="designCanvas"></canvas>
+      </div>
+      <div class="zoom-controls">
+        <button onclick="zoomIn()">+</button>
+        <button onclick="zoomReset()" style="font-size:0.7rem">1:1</button>
+        <button onclick="zoomOut()">−</button>
+      </div>
+    </div>
+
+    <!-- Right: BOM & Export -->
+    <div class="right-panel">
+      <div class="panel">
+        <h3>📦 导出</h3>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn primary" onclick="exportDesignPNG()">📥 下载图纸 PNG</button>
+          <button class="btn secondary" onclick="exportWithGrid()">📏 含网格导出</button>
+        </div>
+      </div>
+
+      <div class="panel" style="flex:1">
+        <h3>📋 用料清单 <span class="tag" id="bomTotal">0 颗</span></h3>
+        <div class="bom-list" id="bomList">
+          <div style="color:var(--text2);font-size:0.82rem;text-align:center;padding:20px 0">
+            开始绘制后<br>这里会显示用料
+          </div>
+        </div>
+        <hr class="separator">
+        <button class="btn sm" onclick="copyBOM()" style="width:100%">📋 复制清单</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== CONVERT TAB ===== -->
+  <div id="tab-convert" class="tab-content" style="display:none;width:100%;height:100%;">
+
+    <!-- Left sidebar -->
+    <div class="sidebar">
+
+      <div class="panel">
+        <h3>🖼️ 上传图片</h3>
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()" 
+             ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+          <div class="upload-icon">📁</div>
+          <div>点击或拖拽图片到这里</div>
+          <div style="font-size:0.75rem;margin-top:4px;color:var(--text2)">支持 JPG、PNG、GIF、WEBP</div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
+      </div>
+
+      <div class="panel">
+        <h3>⚙️ 转换设置</h3>
+        <div class="control-row">
+          <label>网格大小</label>
+        </div>
+        <select id="gridSizePreset" onchange="updateGridSize()">
+          <option value="16">16 × 16</option>
+          <option value="24">24 × 24</option>
+          <option value="32" selected>32 × 32</option>
+          <option value="48">48 × 48</option>
+          <option value="64">64 × 64</option>
+          <option value="custom">自定义</option>
+        </select>
+        <div id="customGridInputs" style="display:none;margin-top:8px">
+          <div class="control-row">
+            <label>宽格数</label>
+            <input type="number" id="convertWidth" value="32" min="4" max="120">
+          </div>
+          <div class="control-row">
+            <label>高格数</label>
+            <input type="number" id="convertHeight" value="32" min="4" max="120">
+          </div>
+        </div>
+
+        <hr class="separator">
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="useBeadPalette" checked>
+          <label for="useBeadPalette">映射到拼豆色板</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="removeBackground">
+          <label for="removeBackground">透明背景不填色</label>
+        </div>
+
+        <hr class="separator">
+
+        <div class="control-row">
+          <label>亮度</label>
+          <input type="range" id="brightness" min="50" max="150" value="100">
+          <span id="brightnessVal" style="font-size:0.78rem;width:32px;text-align:right;color:var(--text2)">100</span>
+        </div>
+        <div class="control-row">
+          <label>对比度</label>
+          <input type="range" id="contrast" min="50" max="150" value="100">
+          <span id="contrastVal" style="font-size:0.78rem;width:32px;text-align:right;color:var(--text2)">100</span>
+        </div>
+        <div class="control-row">
+          <label>饱和度</label>
+          <input type="range" id="saturation" min="0" max="200" value="110">
+          <span id="saturationVal" style="font-size:0.78rem;width:32px;text-align:right;color:var(--text2)">110</span>
+        </div>
+
+        <hr class="separator">
+        <button class="btn primary" onclick="convertImage()" style="width:100%" id="convertBtn" disabled>
+          🔄 开始转换
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Convert canvas area -->
+    <div class="canvas-area" id="convertCanvasArea" style="flex-direction:column;gap:20px;align-items:center;justify-content:flex-start;padding:30px">
+      
+      <div id="convertPlaceholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text2)">
+        <div style="font-size:5rem;margin-bottom:16px">🖼️</div>
+        <div style="font-size:1.1rem;margin-bottom:8px">上传一张图片开始转换</div>
+        <div style="font-size:0.85rem">支持人像、动漫、图标等各种图片</div>
+      </div>
+
+      <div id="convertPreview" style="display:none;width:100%;max-width:900px">
+        <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;justify-content:center">
+          <div style="text-align:center">
+            <div style="font-size:0.85rem;color:var(--text2);margin-bottom:8px">原图预览</div>
+            <canvas id="originalPreview" style="max-width:300px;max-height:300px;border-radius:8px;border:1px solid var(--border)"></canvas>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:0.85rem;color:var(--text2);margin-bottom:8px">拼豆图纸</div>
+            <canvas id="convertResult" style="border-radius:4px;border:2px solid var(--accent);image-rendering:pixelated"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: BOM & Export for convert -->
+    <div class="right-panel">
+      <div class="panel">
+        <h3>📦 导出</h3>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn primary" onclick="exportConvertPNG(true)" id="exportConvertBtn" disabled>📥 含网格导出</button>
+          <button class="btn secondary" onclick="exportConvertPNG(false)" id="exportConvertBtn2" disabled>🖼️ 像素图导出</button>
+          <button class="btn" onclick="sendToDesign()" id="editInDesignBtn" disabled>✏️ 在设计器中编辑</button>
+        </div>
+      </div>
+
+      <div class="panel" style="flex:1">
+        <h3>📋 用料清单 <span class="tag" id="convertBomTotal">0 颗</span></h3>
+        <div class="bom-list" id="convertBomList">
+          <div style="color:var(--text2);font-size:0.82rem;text-align:center;padding:20px 0">
+            转换后显示用料
+          </div>
+        </div>
+        <hr class="separator">
+        <button class="btn sm" onclick="copyConvertBOM()" style="width:100%">📋 复制清单</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="status-bar">
+  <span>🎯 <span id="statusTool">画笔</span></span>
+  <span>📐 <span id="statusPos">-</span></span>
+  <span>🔍 <span id="statusZoom">100%</span></span>
+  <span>🫘 <span id="statusCount">0</span> 颗豆</span>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+// BEAD COLOR PALETTE
+// =============================================
+const BEAD_COLORS = [
+  { name: '白色',   hex: '#FFFFFF' },
+  { name: '米白',   hex: '#F5F0E1' },
+  { name: '浅黄',   hex: '#FFF176' },
+  { name: '黄色',   hex: '#FFD600' },
+  { name: '橙色',   hex: '#FF6D00' },
+  { name: '浅橙',   hex: '#FFAB40' },
+  { name: '红色',   hex: '#D32F2F' },
+  { name: '玫红',   hex: '#E91E63' },
+  { name: '粉红',   hex: '#F48FB1' },
+  { name: '浅粉',   hex: '#FCE4EC' },
+  { name: '紫色',   hex: '#7B1FA2' },
+  { name: '浅紫',   hex: '#CE93D8' },
+  { name: '蓝紫',   hex: '#5C6BC0' },
+  { name: '深蓝',   hex: '#1565C0' },
+  { name: '蓝色',   hex: '#1E88E5' },
+  { name: '浅蓝',   hex: '#90CAF9' },
+  { name: '天蓝',   hex: '#29B6F6' },
+  { name: '青色',   hex: '#00BCD4' },
+  { name: '浅青',   hex: '#B2EBF2' },
+  { name: '深绿',   hex: '#2E7D32' },
+  { name: '绿色',   hex: '#4CAF50' },
+  { name: '浅绿',   hex: '#A5D6A7' },
+  { name: '黄绿',   hex: '#C6E648' },
+  { name: '草绿',   hex: '#8BC34A' },
+  { name: '棕色',   hex: '#6D4C41' },
+  { name: '浅棕',   hex: '#BCAAA4' },
+  { name: '卡其',   hex: '#D4C68F' },
+  { name: '沙色',   hex: '#E8D8B0' },
+  { name: '深灰',   hex: '#424242' },
+  { name: '中灰',   hex: '#9E9E9E' },
+  { name: '浅灰',   hex: '#E0E0E0' },
+  { name: '黑色',   hex: '#212121' },
+  { name: '金色',   hex: '#FFC107' },
+  { name: '银色',   hex: '#CFD8DC' },
+  { name: '肤色',   hex: '#FFCBA4' },
+  { name: '深肤',   hex: '#D4956A' },
+];
+
+// =============================================
+// UTILITY
+// =============================================
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return [r,g,b];
+}
+
+function rgbToHex(r,g,b) {
+  return '#' + [r,g,b].map(v => Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+
+function colorDistance(r1,g1,b1,r2,g2,b2) {
+  const dr = r1-r2, dg = g1-g2, db = b1-b2;
+  return dr*dr*0.3 + dg*dg*0.59 + db*db*0.11;
+}
+
+function findNearestBeadColor(r,g,b) {
+  let best = 0, bestDist = Infinity;
+  for(let i=0;i<BEAD_COLORS.length;i++){
+    const [cr,cg,cb] = hexToRgb(BEAD_COLORS[i].hex);
+    const d = colorDistance(r,g,b,cr,cg,cb);
+    if(d<bestDist){ bestDist=d; best=i; }
+  }
+  return best;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// =============================================
+// TAB SWITCHING
+// =============================================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['design','convert'][i] === tab);
+  });
+  document.getElementById('tab-design').style.display = tab==='design' ? 'flex' : 'none';
+  document.getElementById('tab-convert').style.display = tab==='convert' ? 'flex' : 'none';
+  if(tab==='design') renderDesignCanvas();
+}
+
+// =============================================
+// BUILD COLOR PALETTE UI
+// =============================================
+function buildPalette() {
+  const palette = document.getElementById('colorPalette');
+  palette.innerHTML = '';
+  BEAD_COLORS.forEach((c,i) => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch' + (i===0?' selected':'');
+    sw.style.background = c.hex;
+    sw.title = c.name + ' ' + c.hex;
+    sw.onclick = () => selectColor(i);
+    palette.appendChild(sw);
+  });
+  selectColor(0);
+}
+
+let selectedColorIndex = 0;
+function selectColor(i) {
+  selectedColorIndex = i;
+  const c = BEAD_COLORS[i];
+  document.getElementById('currentColorBox').style.background = c.hex;
+  document.getElementById('currentColorName').textContent = c.name;
+  document.getElementById('currentColorHex').textContent = c.hex;
+  document.querySelectorAll('.color-swatch').forEach((s,j)=>s.classList.toggle('selected',j===i));
+  if(currentTool==='picker') setTool('pen');
+}
+
+// =============================================
+// DESIGN CANVAS
+// =============================================
+let designWidth = 32, designHeight = 32;
+let designGrid = []; // 2d array of color indices (-1 = empty)
+let designZoom = 1;
+let currentTool = 'pen';
+let isDrawing = false;
+let undoStack = [], redoStack = [];
+let lastPos = null;
+
+const designCanvas = document.getElementById('designCanvas');
+const dctx = designCanvas.getContext('2d');
+
+function getCellSize() {
+  // Target canvas display size: min 16px per cell, max 24px
+  return Math.max(16, Math.min(24, Math.floor(600 / Math.max(designWidth, designHeight))));
+}
+
+function initDesignCanvas() {
+  designWidth = parseInt(document.getElementById('designWidth').value) || 32;
+  designHeight = parseInt(document.getElementById('designHeight').value) || 32;
+  designGrid = Array.from({length:designHeight}, () => Array(designWidth).fill(-1));
+  undoStack = []; redoStack = [];
+  zoomReset();
+  renderDesignCanvas();
+  updateBOM();
+}
+
+function setDesignSize(w,h) {
+  document.getElementById('designWidth').value = w;
+  document.getElementById('designHeight').value = h;
+  initDesignCanvas();
+}
+
+function renderDesignCanvas() {
+  const cell = getCellSize();
+  const cw = designWidth * cell;
+  const ch = designHeight * cell;
+  designCanvas.width = cw;
+  designCanvas.height = ch;
+  designCanvas.style.width = (cw * designZoom) + 'px';
+  designCanvas.style.height = (ch * designZoom) + 'px';
+
+  const showGrid = document.getElementById('showGrid').checked;
+  const beadStyle = document.getElementById('showBeadStyle').checked;
+  const padding = beadStyle ? cell * 0.08 : 0;
+  const radius = beadStyle ? cell * 0.45 : 0;
+
+  // Background
+  dctx.fillStyle = '#2a2a3a';
+  dctx.fillRect(0,0,cw,ch);
+
+  // Draw cells
+  for(let row=0;row<designHeight;row++){
+    for(let col=0;col<designWidth;col++){
+      const ci = designGrid[row][col];
+      const x = col*cell, y = row*cell;
+
+      if(ci >= 0) {
+        const color = BEAD_COLORS[ci].hex;
+        if(beadStyle) {
+          // Draw circle bead
+          dctx.beginPath();
+          dctx.arc(x+cell/2, y+cell/2, cell/2-padding, 0, Math.PI*2);
+          dctx.fillStyle = color;
+          dctx.fill();
+          // Highlight
+          const grad = dctx.createRadialGradient(
+            x+cell*0.35, y+cell*0.3, cell*0.05,
+            x+cell/2, y+cell/2, cell*0.46
+          );
+          grad.addColorStop(0,'rgba(255,255,255,0.35)');
+          grad.addColorStop(1,'rgba(0,0,0,0.15)');
+          dctx.fillStyle = grad;
+          dctx.fill();
+        } else {
+          dctx.fillStyle = color;
+          dctx.fillRect(x+1, y+1, cell-2, cell-2);
+        }
+      }
+    }
+  }
+
+  // Grid lines
+  if(showGrid) {
+    dctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    dctx.lineWidth = 0.5;
+    for(let c=0;c<=designWidth;c++){
+      dctx.beginPath();
+      dctx.moveTo(c*cell,0);
+      dctx.lineTo(c*cell,ch);
+      dctx.stroke();
+    }
+    for(let r=0;r<=designHeight;r++){
+      dctx.beginPath();
+      dctx.moveTo(0,r*cell);
+      dctx.lineTo(cw,r*cell);
+      dctx.stroke();
+    }
+  }
+
+  document.getElementById('statusCount').textContent = countBeads();
+}
+
+function getGridPos(e) {
+  const rect = designCanvas.getBoundingClientRect();
+  const scaleX = designCanvas.width / rect.width;
+  const scaleY = designCanvas.height / rect.height;
+  const cell = getCellSize();
+  const x = Math.floor((e.clientX - rect.left) * scaleX / cell);
+  const y = Math.floor((e.clientY - rect.top) * scaleY / cell);
+  return {x, y};
+}
+
+function isValidPos(x,y) { return x>=0&&x<designWidth&&y>=0&&y<designHeight; }
+
+function applyTool(x,y) {
+  if(!isValidPos(x,y)) return;
+  if(currentTool==='pen'){
+    designGrid[y][x] = selectedColorIndex;
+  } else if(currentTool==='eraser'){
+    designGrid[y][x] = -1;
+  } else if(currentTool==='picker'){
+    const ci = designGrid[y][x];
+    if(ci >= 0) selectColor(ci);
+    return;
+  } else if(currentTool==='fill'){
+    floodFill(x,y, designGrid[y][x], selectedColorIndex);
+  }
+  renderDesignCanvas();
+  updateBOM();
+}
+
+function floodFill(x,y,oldColor,newColor) {
+  if(oldColor===newColor) return;
+  const queue = [[x,y]];
+  const visited = new Set();
+  while(queue.length){
+    const [cx,cy] = queue.shift();
+    const key = cx+','+cy;
+    if(visited.has(key)||!isValidPos(cx,cy)||designGrid[cy][cx]!==oldColor) continue;
+    visited.add(key);
+    designGrid[cy][cx] = newColor;
+    queue.push([cx-1,cy],[cx+1,cy],[cx,cy-1],[cx,cy+1]);
+  }
+}
+
+// Mouse events
+designCanvas.addEventListener('mousedown', e => {
+  if(e.button!==0) return;
+  isDrawing = true;
+  saveUndoState();
+  const {x,y} = getGridPos(e);
+  lastPos = {x,y};
+  applyTool(x,y);
+});
+
+designCanvas.addEventListener('mousemove', e => {
+  const {x,y} = getGridPos(e);
+  document.getElementById('statusPos').textContent = `${x+1},${y+1}`;
+  if(!isDrawing||currentTool==='fill'||currentTool==='picker') return;
+  if(lastPos && (lastPos.x!==x||lastPos.y!==y)){
+    // Interpolate for fast mouse
+    const dx = x-lastPos.x, dy = y-lastPos.y;
+    const steps = Math.max(Math.abs(dx),Math.abs(dy));
+    for(let i=0;i<=steps;i++){
+      const ix = Math.round(lastPos.x + dx*i/steps);
+      const iy = Math.round(lastPos.y + dy*i/steps);
+      applyTool(ix,iy);
+    }
+    lastPos = {x,y};
+  }
+});
+
+designCanvas.addEventListener('mouseup', () => { isDrawing=false; lastPos=null; });
+designCanvas.addEventListener('mouseleave', () => { 
+  isDrawing=false; lastPos=null;
+  document.getElementById('statusPos').textContent = '-';
+});
+
+// Touch support
+designCanvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  isDrawing = true;
+  saveUndoState();
+  const touch = e.touches[0];
+  const {x,y} = getGridPos(touch);
+  applyTool(x,y);
+}, {passive:false});
+
+designCanvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const {x,y} = getGridPos(touch);
+  if(!isDrawing||currentTool==='fill'||currentTool==='picker') return;
+  applyTool(x,y);
+}, {passive:false});
+
+designCanvas.addEventListener('touchend', () => { isDrawing=false; });
+
+// =============================================
+// TOOLS & UNDO
+// =============================================
+function setTool(t) {
+  currentTool = t;
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tool-'+t)?.classList.add('active');
+  const names = {pen:'画笔', eraser:'橡皮', fill:'填充', picker:'取色'};
+  document.getElementById('statusTool').textContent = names[t]||t;
+  if(t==='eraser'||t==='fill') designCanvas.style.cursor = t==='eraser'?'cell':'crosshair';
+  else if(t==='picker') designCanvas.style.cursor = 'eyedropper';
+  else designCanvas.style.cursor = 'crosshair';
+}
+
+function saveUndoState() {
+  undoStack.push(designGrid.map(r=>[...r]));
+  if(undoStack.length>50) undoStack.shift();
+  redoStack = [];
+}
+
+function undo() {
+  if(!undoStack.length) return;
+  redoStack.push(designGrid.map(r=>[...r]));
+  designGrid = undoStack.pop();
+  renderDesignCanvas();
+  updateBOM();
+}
+
+function redo() {
+  if(!redoStack.length) return;
+  undoStack.push(designGrid.map(r=>[...r]));
+  designGrid = redoStack.pop();
+  renderDesignCanvas();
+  updateBOM();
+}
+
+function clearDesignCanvas() {
+  if(!confirm('确定清空画板？')) return;
+  saveUndoState();
+  designGrid = Array.from({length:designHeight}, () => Array(designWidth).fill(-1));
+  renderDesignCanvas();
+  updateBOM();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if(e.ctrlKey||e.metaKey){
+    if(e.key==='z'){e.preventDefault();undo();}
+    if(e.key==='y'||e.key==='Z'){e.preventDefault();redo();}
+  }
+  if(!e.ctrlKey&&!e.metaKey&&!e.altKey){
+    if(e.key==='b') setTool('pen');
+    if(e.key==='e') setTool('eraser');
+    if(e.key==='f') setTool('fill');
+    if(e.key==='i') setTool('picker');
+  }
+});
+
+// =============================================
+// ZOOM
+// =============================================
+function zoomIn() { designZoom = Math.min(8, designZoom*1.25); applyZoom(); }
+function zoomOut() { designZoom = Math.max(0.25, designZoom/1.25); applyZoom(); }
+function zoomReset() { designZoom = 1; applyZoom(); }
+function applyZoom() {
+  const cell = getCellSize();
+  designCanvas.style.width = (designWidth*cell*designZoom)+'px';
+  designCanvas.style.height = (designHeight*cell*designZoom)+'px';
+  document.getElementById('statusZoom').textContent = Math.round(designZoom*100)+'%';
+}
+
+// =============================================
+// BOM
+// =============================================
+function countBeads() {
+  let total = 0;
+  designGrid.forEach(row => row.forEach(c => { if(c>=0) total++; }));
+  return total;
+}
+
+function updateBOM() {
+  const counts = new Array(BEAD_COLORS.length).fill(0);
+  designGrid.forEach(row => row.forEach(ci => { if(ci>=0) counts[ci]++; }));
+  const items = BEAD_COLORS.map((c,i)=>({...c,i,count:counts[i]}))
+    .filter(x=>x.count>0)
+    .sort((a,b)=>b.count-a.count);
+  
+  const total = items.reduce((s,x)=>s+x.count,0);
+  document.getElementById('bomTotal').textContent = total+'颗';
+  document.getElementById('statusCount').textContent = total;
+
+  const list = document.getElementById('bomList');
+  if(!items.length){
+    list.innerHTML='<div style="color:var(--text2);font-size:0.82rem;text-align:center;padding:20px 0">开始绘制后<br>这里会显示用料</div>';
+    return;
+  }
+  list.innerHTML = items.map(x=>`
+    <div class="bom-item">
+      <div class="bom-color" style="background:${x.hex}"></div>
+      <div class="bom-name">${x.name}</div>
+      <div class="bom-count">${x.count}</div>
+    </div>
+  `).join('');
+}
+
+function copyBOM() {
+  const counts = new Array(BEAD_COLORS.length).fill(0);
+  designGrid.forEach(row => row.forEach(ci => { if(ci>=0) counts[ci]++; }));
+  const items = BEAD_COLORS.map((c,i)=>({...c,count:counts[i]})).filter(x=>x.count>0).sort((a,b)=>b.count-a.count);
+  const text = ['拼豆用料清单','==========', ...items.map(x=>`${x.name} (${x.hex}): ${x.count}颗`)].join('\n');
+  navigator.clipboard.writeText(text).then(()=>showToast('✅ 清单已复制'));
+}
+
+// =============================================
+// EXPORT DESIGN
+// =============================================
+function makeExportCanvas(withGrid) {
+  const cellPx = 24; // fixed export resolution
+  const cw = designWidth * cellPx;
+  const ch = designHeight * cellPx;
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = cw; offCanvas.height = ch;
+  const ctx = offCanvas.getContext('2d');
+  
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0,0,cw,ch);
+
+  for(let row=0;row<designHeight;row++){
+    for(let col=0;col<designWidth;col++){
+      const ci = designGrid[row][col];
+      if(ci<0) continue;
+      const x=col*cellPx, y=row*cellPx;
+      ctx.beginPath();
+      ctx.arc(x+cellPx/2, y+cellPx/2, cellPx/2-1.5, 0, Math.PI*2);
+      ctx.fillStyle = BEAD_COLORS[ci].hex;
+      ctx.fill();
+      const grad = ctx.createRadialGradient(x+cellPx*0.35,y+cellPx*0.3,cellPx*0.05,x+cellPx/2,y+cellPx/2,cellPx*0.46);
+      grad.addColorStop(0,'rgba(255,255,255,0.3)');
+      grad.addColorStop(1,'rgba(0,0,0,0.1)');
+      ctx.fillStyle=grad; ctx.fill();
+    }
+  }
+
+  if(withGrid){
+    ctx.strokeStyle='rgba(255,255,255,0.15)';
+    ctx.lineWidth=0.5;
+    for(let c=0;c<=designWidth;c++){ctx.beginPath();ctx.moveTo(c*cellPx,0);ctx.lineTo(c*cellPx,ch);ctx.stroke();}
+    for(let r=0;r<=designHeight;r++){ctx.beginPath();ctx.moveTo(0,r*cellPx);ctx.lineTo(cw,r*cellPx);ctx.stroke();}
+  }
+  return offCanvas;
+}
+
+function downloadCanvas(canvas, filename) {
+  const a = document.createElement('a');
+  a.download = filename;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+function exportDesignPNG() { downloadCanvas(makeExportCanvas(false), '拼豆图纸.png'); showToast('✅ 导出成功'); }
+function exportWithGrid() { downloadCanvas(makeExportCanvas(true), '拼豆图纸_含网格.png'); showToast('✅ 导出成功'); }
+
+// =============================================
+// IMAGE CONVERT
+// =============================================
+let uploadedImage = null;
+let convertedGrid = null;
+
+// Update sliders
+['brightness','contrast','saturation'].forEach(id=>{
+  const el=document.getElementById(id);
+  const val=document.getElementById(id+'Val');
+  el.addEventListener('input',()=>{val.textContent=el.value;});
+});
+
+document.getElementById('gridSizePreset').addEventListener('change',updateGridSize);
+
+function updateGridSize() {
+  const v = document.getElementById('gridSizePreset').value;
+  document.getElementById('customGridInputs').style.display = v==='custom'?'block':'none';
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('uploadArea').classList.add('drag-over');
+}
+function handleDragLeave(e) {
+  document.getElementById('uploadArea').classList.remove('drag-over');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadArea').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if(file&&file.type.startsWith('image/')) loadImageFile(file);
+}
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if(file) loadImageFile(file);
+}
+
+function loadImageFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      uploadedImage = img;
+      // Show original preview
+      const prev = document.getElementById('originalPreview');
+      const maxPrev = 280;
+      const scale = Math.min(maxPrev/img.width, maxPrev/img.height, 1);
+      prev.width = img.width*scale;
+      prev.height = img.height*scale;
+      const pctx = prev.getContext('2d');
+      pctx.drawImage(img, 0, 0, prev.width, prev.height);
+      
+      document.getElementById('convertPlaceholder').style.display='none';
+      document.getElementById('convertPreview').style.display='block';
+      document.getElementById('convertBtn').disabled=false;
+      document.getElementById('uploadArea').innerHTML = `
+        <div class="upload-icon">✅</div>
+        <div>${file.name}</div>
+        <div style="font-size:0.75rem;color:var(--text2)">${img.width}×${img.height}px — 点击重新上传</div>
+      `;
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function convertImage() {
+  if(!uploadedImage) return;
+
+  const preset = document.getElementById('gridSizePreset').value;
+  let gw, gh;
+  if(preset==='custom'){
+    gw = parseInt(document.getElementById('convertWidth').value)||32;
+    gh = parseInt(document.getElementById('convertHeight').value)||32;
+  } else {
+    const s = parseInt(preset);
+    // Keep aspect ratio
+    const aspect = uploadedImage.width/uploadedImage.height;
+    if(aspect>=1){ gw=s; gh=Math.round(s/aspect); }
+    else { gh=s; gw=Math.round(s*aspect); }
+    gw=Math.max(4,gw); gh=Math.max(4,gh);
+  }
+
+  const brightness = parseInt(document.getElementById('brightness').value)/100;
+  const contrast = parseInt(document.getElementById('contrast').value)/100;
+  const saturation = parseInt(document.getElementById('saturation').value)/100;
+  const useBeadPalette = document.getElementById('useBeadPalette').checked;
+  const removeBackground = document.getElementById('removeBackground').checked;
+
+  // Sample image at grid resolution
+  const tmpCanvas = document.createElement('canvas');
+  tmpCanvas.width = gw; tmpCanvas.height = gh;
+  const tctx = tmpCanvas.getContext('2d');
+  tctx.drawImage(uploadedImage, 0, 0, gw, gh);
+  const imgData = tctx.getImageData(0,0,gw,gh);
+  const data = imgData.data;
+
+  // Apply adjustments and build grid
+  const grid = Array.from({length:gh},()=>Array(gw).fill(-1));
+
+  for(let row=0;row<gh;row++){
+    for(let col=0;col<gw;col++){
+      const idx=(row*gw+col)*4;
+      let r=data[idx], g=data[idx+1], b=data[idx+2], a=data[idx+3];
+
+      if(removeBackground && a<128) { grid[row][col]=-1; continue; }
+
+      // Brightness
+      r=r*brightness; g=g*brightness; b=b*brightness;
+
+      // Contrast
+      r=(r-128)*contrast+128; g=(g-128)*contrast+128; b=(b-128)*contrast+128;
+
+      // Saturation
+      const gray = 0.299*r+0.587*g+0.114*b;
+      r=gray+(r-gray)*saturation;
+      g=gray+(g-gray)*saturation;
+      b=gray+(b-gray)*saturation;
+
+      r=Math.round(Math.max(0,Math.min(255,r)));
+      g=Math.round(Math.max(0,Math.min(255,g)));
+      b=Math.round(Math.max(0,Math.min(255,b)));
+
+      if(useBeadPalette){
+        grid[row][col] = findNearestBeadColor(r,g,b);
+      } else {
+        // Store as custom hex (won't work for BOM but shows preview)
+        grid[row][col] = findNearestBeadColor(r,g,b); // fallback to nearest for now
+      }
+    }
+  }
+
+  convertedGrid = {grid, gw, gh};
+  renderConvertResult(grid, gw, gh);
+  updateConvertBOM(grid);
+  document.getElementById('exportConvertBtn').disabled=false;
+  document.getElementById('exportConvertBtn2').disabled=false;
+  document.getElementById('editInDesignBtn').disabled=false;
+}
+
+function renderConvertResult(grid, gw, gh) {
+  const maxDisplay = 600;
+  const cellPx = Math.max(8, Math.min(18, Math.floor(maxDisplay/Math.max(gw,gh))));
+  const cw=gw*cellPx, ch=gh*cellPx;
+  const canvas = document.getElementById('convertResult');
+  canvas.width=cw; canvas.height=ch;
+  canvas.style.maxWidth='500px';
+  canvas.style.maxHeight='500px';
+  const ctx=canvas.getContext('2d');
+
+  ctx.fillStyle='#2a2a3a';
+  ctx.fillRect(0,0,cw,ch);
+
+  for(let row=0;row<gh;row++){
+    for(let col=0;col<gw;col++){
+      const ci=grid[row][col];
+      if(ci<0) continue;
+      const x=col*cellPx, y=row*cellPx;
+      ctx.beginPath();
+      ctx.arc(x+cellPx/2,y+cellPx/2,cellPx/2-Math.max(0.5,cellPx*0.08),0,Math.PI*2);
+      ctx.fillStyle=BEAD_COLORS[ci].hex;
+      ctx.fill();
+      if(cellPx>=10){
+        const grad=ctx.createRadialGradient(x+cellPx*0.35,y+cellPx*0.3,cellPx*0.05,x+cellPx/2,y+cellPx/2,cellPx*0.46);
+        grad.addColorStop(0,'rgba(255,255,255,0.3)');
+        grad.addColorStop(1,'rgba(0,0,0,0.1)');
+        ctx.fillStyle=grad; ctx.fill();
+      }
+    }
+  }
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,0.1)';
+  ctx.lineWidth=0.5;
+  for(let c=0;c<=gw;c++){ctx.beginPath();ctx.moveTo(c*cellPx,0);ctx.lineTo(c*cellPx,ch);ctx.stroke();}
+  for(let r=0;r<=gh;r++){ctx.beginPath();ctx.moveTo(0,r*cellPx);ctx.lineTo(cw,r*cellPx);ctx.stroke();}
+}
+
+function updateConvertBOM(grid) {
+  const counts = new Array(BEAD_COLORS.length).fill(0);
+  let total=0;
+  grid.forEach(row=>row.forEach(ci=>{if(ci>=0){counts[ci]++;total++;}}));
+  const items = BEAD_COLORS.map((c,i)=>({...c,count:counts[i]})).filter(x=>x.count>0).sort((a,b)=>b.count-a.count);
+  document.getElementById('convertBomTotal').textContent=total+'颗';
+  document.getElementById('convertBomList').innerHTML = items.map(x=>`
+    <div class="bom-item">
+      <div class="bom-color" style="background:${x.hex}"></div>
+      <div class="bom-name">${x.name}</div>
+      <div class="bom-count">${x.count}</div>
+    </div>
+  `).join('') || '<div style="color:var(--text2);font-size:0.82rem;text-align:center;padding:20px 0">暂无数据</div>';
+}
+
+function copyConvertBOM() {
+  if(!convertedGrid) return;
+  const counts = new Array(BEAD_COLORS.length).fill(0);
+  convertedGrid.grid.forEach(row=>row.forEach(ci=>{if(ci>=0)counts[ci]++;}));
+  const items = BEAD_COLORS.map((c,i)=>({...c,count:counts[i]})).filter(x=>x.count>0).sort((a,b)=>b.count-a.count);
+  const text = ['拼豆用料清单（图片转换）','==========', ...items.map(x=>`${x.name} (${x.hex}): ${x.count}颗`)].join('\n');
+  navigator.clipboard.writeText(text).then(()=>showToast('✅ 清单已复制'));
+}
+
+function exportConvertPNG(withGrid) {
+  if(!convertedGrid) return;
+  const {grid,gw,gh}=convertedGrid;
+  const cellPx=24;
+  const offCanvas=document.createElement('canvas');
+  offCanvas.width=gw*cellPx; offCanvas.height=gh*cellPx;
+  const ctx=offCanvas.getContext('2d');
+  ctx.fillStyle='#1a1a2e';
+  ctx.fillRect(0,0,offCanvas.width,offCanvas.height);
+  for(let row=0;row<gh;row++){
+    for(let col=0;col<gw;col++){
+      const ci=grid[row][col]; if(ci<0)continue;
+      const x=col*cellPx,y=row*cellPx;
+      ctx.beginPath();ctx.arc(x+cellPx/2,y+cellPx/2,cellPx/2-1.5,0,Math.PI*2);
+      ctx.fillStyle=BEAD_COLORS[ci].hex; ctx.fill();
+      const grad=ctx.createRadialGradient(x+cellPx*0.35,y+cellPx*0.3,cellPx*0.05,x+cellPx/2,y+cellPx/2,cellPx*0.46);
+      grad.addColorStop(0,'rgba(255,255,255,0.3)');grad.addColorStop(1,'rgba(0,0,0,0.1)');
+      ctx.fillStyle=grad;ctx.fill();
+    }
+  }
+  if(withGrid){
+    ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=0.5;
+    for(let c=0;c<=gw;c++){ctx.beginPath();ctx.moveTo(c*cellPx,0);ctx.lineTo(c*cellPx,gh*cellPx);ctx.stroke();}
+    for(let r=0;r<=gh;r++){ctx.beginPath();ctx.moveTo(0,r*cellPx);ctx.lineTo(gw*cellPx,r*cellPx);ctx.stroke();}
+  }
+  downloadCanvas(offCanvas,'拼豆图纸_图片转换'+(withGrid?'_含网格':'')+'.png');
+  showToast('✅ 导出成功');
+}
+
+function sendToDesign() {
+  if(!convertedGrid) return;
+  const {grid,gw,gh}=convertedGrid;
+  designWidth=gw; designHeight=gh;
+  document.getElementById('designWidth').value=gw;
+  document.getElementById('designHeight').value=gh;
+  designGrid=grid.map(r=>[...r]);
+  undoStack=[]; redoStack=[];
+  switchTab('design');
+  zoomReset();
+  renderDesignCanvas();
+  updateBOM();
+  showToast('✅ 已发送到设计器');
+}
+
+// =============================================
+// INIT
+// =============================================
+buildPalette();
+initDesignCanvas();
+setTool('pen');
+
+// Range input live update
+document.getElementById('brightness').addEventListener('input', e => document.getElementById('brightnessVal').textContent=e.target.value);
+document.getElementById('contrast').addEventListener('input', e => document.getElementById('contrastVal').textContent=e.target.value);
+document.getElementById('saturation').addEventListener('input', e => document.getElementById('saturationVal').textContent=e.target.value);
+</script>
+</body>
+</html>

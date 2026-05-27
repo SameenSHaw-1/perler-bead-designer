@@ -257,13 +257,13 @@
   .color-palette {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: 4px;
+    gap: 3px;
   }
 
   .color-swatch {
     width: 100%;
     aspect-ratio: 1;
-    border-radius: 6px;
+    border-radius: 5px;
     cursor: pointer;
     border: 2px solid transparent;
     transition: all 0.15s;
@@ -281,22 +281,81 @@
   }
 
   .current-color-box {
-    width: 40px;
-    height: 40px;
+    width: 40px; height: 40px;
     border-radius: 8px;
     border: 2px solid var(--border);
     flex-shrink: 0;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .current-color-box:hover { transform: scale(1.05); }
+
+  .current-color-info { font-size: 0.8rem; color: var(--text2); }
+  .current-color-info strong { display: block; color: var(--text); font-size: 0.9rem; }
+
+  /* Palette tabs */
+  .palette-tabs { display: flex; gap: 3px; margin-bottom: 8px; }
+  .palette-tab {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text2); padding: 4px 4px; border-radius: 6px;
+    cursor: pointer; font-size: 0.72rem; transition: all 0.15s; text-align: center;
+  }
+  .palette-tab.active { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+
+  /* SV box */
+  .sv-box-wrap { position: relative; width: 100%; height: 130px; margin-bottom: 2px; }
+  .sv-box { width: 100%; height: 130px; border-radius: 6px; cursor: crosshair; border: 1px solid var(--border); display: block; }
+  .sv-cursor {
+    position: absolute; width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid white; box-shadow: 0 0 0 1px rgba(0,0,0,0.5);
+    transform: translate(-50%,-50%); pointer-events: none; top: 0; left: 0;
   }
 
-  .current-color-info {
-    font-size: 0.8rem;
-    color: var(--text2);
+  /* Hue bar */
+  .hue-bar {
+    width: 100%; height: 14px; border-radius: 7px; position: relative;
+    cursor: pointer;
+    background: linear-gradient(to right,
+      hsl(0,100%,50%),hsl(30,100%,50%),hsl(60,100%,50%),hsl(90,100%,50%),
+      hsl(120,100%,50%),hsl(150,100%,50%),hsl(180,100%,50%),hsl(210,100%,50%),
+      hsl(240,100%,50%),hsl(270,100%,50%),hsl(300,100%,50%),hsl(330,100%,50%),hsl(360,100%,50%));
+    border: 1px solid var(--border);
+  }
+  .hue-thumb {
+    position: absolute; width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid white; box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
+    top: 50%; transform: translate(-50%,-50%); pointer-events: none;
   }
 
-  .current-color-info strong {
-    display: block;
-    color: var(--text);
-    font-size: 0.9rem;
+  /* Hex/RGB inputs */
+  .hex-row { display: flex; gap: 5px; align-items: center; }
+  .hex-input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); padding: 5px 8px; border-radius: 6px;
+    font-size: 0.82rem; font-family: monospace; text-transform: uppercase;
+  }
+  .hex-input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+
+  /* Recent & custom */
+  .recent-colors { display: flex; gap: 3px; flex-wrap: wrap; }
+  .recent-swatch {
+    width: 20px; height: 20px; border-radius: 4px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.15); transition: transform 0.1s;
+    flex-shrink: 0;
+  }
+  .recent-swatch:hover { transform: scale(1.25); }
+  .add-to-palette-btn {
+    background: var(--bg); border: 1px dashed var(--border); color: var(--text2);
+    padding: 5px; border-radius: 6px; cursor: pointer; font-size: 0.78rem;
+    transition: all 0.15s; text-align: center; width: 100%;
+  }
+  .add-to-palette-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* Nearest bead suggestion */
+  .nearest-bead-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 8px; background: var(--bg);
+    border-radius: 6px; border: 1px solid var(--border);
   }
 
   /* Upload area */
@@ -559,13 +618,69 @@
       <div class="panel">
         <h3>🎨 色板</h3>
         <div class="current-color-display">
-          <div class="current-color-box" id="currentColorBox"></div>
+          <div class="current-color-box" id="currentColorBox" onclick="switchPaletteTab('spectrum')" title="点击打开全色谱"></div>
           <div class="current-color-info">
             <strong id="currentColorName">白色</strong>
             <span id="currentColorHex">#FFFFFF</span>
           </div>
         </div>
-        <div class="color-palette" id="colorPalette"></div>
+        <!-- Tabs -->
+        <div class="palette-tabs">
+          <div class="palette-tab active" id="ptab-bead"   onclick="switchPaletteTab('bead')">🫘 拼豆色</div>
+          <div class="palette-tab"        id="ptab-spectrum" onclick="switchPaletteTab('spectrum')">🌈 全色谱</div>
+          <div class="palette-tab"        id="ptab-custom"  onclick="switchPaletteTab('custom')">⭐ 自定义</div>
+        </div>
+        <!-- Bead palette pane -->
+        <div id="palettePane-bead">
+          <div class="color-palette" id="colorPalette"></div>
+        </div>
+        <!-- Spectrum picker pane -->
+        <div id="palettePane-spectrum" style="display:none">
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div class="sv-box-wrap">
+              <canvas class="sv-box" id="svBox" width="230" height="130"></canvas>
+              <div class="sv-cursor" id="svCursor"></div>
+            </div>
+            <div class="hue-bar" id="hueBar"><div class="hue-thumb" id="hueThumb"></div></div>
+            <div class="hex-row">
+              <span style="font-size:0.75rem;color:var(--text2)">HEX</span>
+              <input class="hex-input" id="specHexInput" type="text" value="#FFFFFF" maxlength="7" placeholder="#FF0000">
+              <button class="btn sm" onclick="applyHexInput()">✓</button>
+            </div>
+            <div style="display:flex;gap:4px">
+              <div style="flex:1;text-align:center">
+                <input type="number" id="specR" min="0" max="255" value="255" style="width:100%;font-size:0.75rem;text-align:center;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px" oninput="applyRgbInput()">
+                <div style="font-size:0.7rem;color:var(--text2);margin-top:1px">R</div>
+              </div>
+              <div style="flex:1;text-align:center">
+                <input type="number" id="specG" min="0" max="255" value="255" style="width:100%;font-size:0.75rem;text-align:center;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px" oninput="applyRgbInput()">
+                <div style="font-size:0.7rem;color:var(--text2);margin-top:1px">G</div>
+              </div>
+              <div style="flex:1;text-align:center">
+                <input type="number" id="specB" min="0" max="255" value="0" style="width:100%;font-size:0.75rem;text-align:center;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px" oninput="applyRgbInput()">
+                <div style="font-size:0.7rem;color:var(--text2);margin-top:1px">B</div>
+              </div>
+            </div>
+            <div class="nearest-bead-row">
+              <div id="nearestBeadBox" style="width:20px;height:20px;border-radius:4px;flex-shrink:0;border:1px solid rgba(255,255,255,0.1);background:#fff"></div>
+              <div style="font-size:0.73rem;color:var(--text2);flex:1">最近拼豆色：<strong id="nearestBeadName" style="color:var(--text)">白色</strong></div>
+              <button class="btn sm" onclick="snapToNearestBead()" style="padding:3px 7px;font-size:0.7rem">吸附</button>
+            </div>
+            <div>
+              <div style="font-size:0.73rem;color:var(--text2);margin-bottom:4px">最近使用</div>
+              <div class="recent-colors" id="recentColors"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Custom palette pane -->
+        <div id="palettePane-custom" style="display:none">
+          <div style="font-size:0.75rem;color:var(--text2);margin-bottom:6px">在全色谱选色后点击添加</div>
+          <div class="color-palette" id="customPalette"></div>
+          <div style="height:6px"></div>
+          <button class="add-to-palette-btn" onclick="addCurrentToCustom()">＋ 添加当前颜色</button>
+          <div style="height:4px"></div>
+          <button class="add-to-palette-btn" onclick="clearCustomPalette()" style="color:#e94560;border-color:#e94560">🗑 清空自定义色板</button>
+        </div>
       </div>
 
     </div>
@@ -836,7 +951,33 @@ function switchTab(tab) {
 }
 
 // =============================================
-// BUILD COLOR PALETTE UI
+// DYNAMIC COLOR TABLE (bead + custom)
+// =============================================
+const DYNAMIC_COLORS = [...BEAD_COLORS];
+function getOrAddDynamic(hex) {
+  hex = hex.toUpperCase();
+  const i = DYNAMIC_COLORS.findIndex(c=>c.hex.toUpperCase()===hex);
+  if(i>=0) return i;
+  DYNAMIC_COLORS.push({name:hex,hex});
+  return DYNAMIC_COLORS.length-1;
+}
+function getColorByIndex(i) { return DYNAMIC_COLORS[i]||{name:'?',hex:'#888'}; }
+
+// =============================================
+// PALETTE STATE
+// =============================================
+let selectedColorIndex = 0;
+let currentHex = '#FFFFFF';
+let currentPaletteTab = 'bead';
+let customPaletteColors = JSON.parse(localStorage.getItem('perler_custom')||'[]');
+let recentColors = JSON.parse(localStorage.getItem('perler_recent')||'[]');
+
+// HSV state
+let spH=0, spS=0, spV=1;
+let svDragging=false, hueDragging=false;
+
+// =============================================
+// BUILD PALETTE UI
 // =============================================
 function buildPalette() {
   const palette = document.getElementById('colorPalette');
@@ -846,21 +987,290 @@ function buildPalette() {
     sw.className = 'color-swatch' + (i===0?' selected':'');
     sw.style.background = c.hex;
     sw.title = c.name + ' ' + c.hex;
-    sw.onclick = () => selectColor(i);
+    sw.onclick = () => selectBeadColor(i);
     palette.appendChild(sw);
   });
-  selectColor(0);
+  buildCustomPalette();
+  buildRecentColors();
+  initSpectrumPicker();
+  selectBeadColor(0);
 }
 
-let selectedColorIndex = 0;
-function selectColor(i) {
+function selectBeadColor(i) {
   selectedColorIndex = i;
-  const c = BEAD_COLORS[i];
-  document.getElementById('currentColorBox').style.background = c.hex;
-  document.getElementById('currentColorName').textContent = c.name;
-  document.getElementById('currentColorHex').textContent = c.hex;
-  document.querySelectorAll('.color-swatch').forEach((s,j)=>s.classList.toggle('selected',j===i));
+  currentHex = BEAD_COLORS[i].hex;
+  updateColorDisplay(BEAD_COLORS[i].name, currentHex);
+  document.querySelectorAll('#colorPalette .color-swatch').forEach((s,j)=>s.classList.toggle('selected',j===i));
+  document.querySelectorAll('#customPalette .color-swatch').forEach(s=>s.classList.remove('selected'));
+  addToRecent(currentHex);
   if(currentTool==='picker') setTool('pen');
+}
+
+function selectColor(i) { selectBeadColor(i); } // legacy
+
+function selectCustomColor(hex, swEl) {
+  selectedColorIndex = -1;
+  currentHex = hex.toUpperCase();
+  updateColorDisplay(currentHex, currentHex);
+  document.querySelectorAll('#colorPalette .color-swatch').forEach(s=>s.classList.remove('selected'));
+  document.querySelectorAll('#customPalette .color-swatch').forEach(s=>s.classList.remove('selected'));
+  if(swEl) swEl.classList.add('selected');
+  addToRecent(currentHex);
+  syncSpectrumToHex(currentHex);
+  if(currentTool==='picker') setTool('pen');
+}
+
+function updateColorDisplay(name, hex) {
+  document.getElementById('currentColorBox').style.background = hex;
+  document.getElementById('currentColorName').textContent = name;
+  document.getElementById('currentColorHex').textContent = hex.toUpperCase();
+  // nearest bead
+  const [r,g,b]=hexToRgb(hex);
+  const ni=findNearestBeadColor(r,g,b);
+  const nb=document.getElementById('nearestBeadBox');
+  const nn=document.getElementById('nearestBeadName');
+  if(nb) nb.style.background=BEAD_COLORS[ni].hex;
+  if(nn) nn.textContent=BEAD_COLORS[ni].name;
+}
+
+function getActiveColor() { return currentHex; }
+
+// =============================================
+// PALETTE TABS
+// =============================================
+function switchPaletteTab(tab) {
+  currentPaletteTab = tab;
+  ['bead','spectrum','custom'].forEach(t=>{
+    const tb=document.getElementById('ptab-'+t);
+    const pn=document.getElementById('palettePane-'+t);
+    if(tb) tb.classList.toggle('active',t===tab);
+    if(pn) pn.style.display=t===tab?'block':'none';
+  });
+  if(tab==='spectrum') { renderSVBox(); updateHueThumb(); }
+}
+
+// =============================================
+// SPECTRUM PICKER
+// =============================================
+function initSpectrumPicker() {
+  const svBox = document.getElementById('svBox');
+  const hueBar = document.getElementById('hueBar');
+  if(!svBox||!hueBar) return;
+
+  svBox.addEventListener('mousedown', e=>{svDragging=true;handleSVMove(e);});
+  hueBar.addEventListener('mousedown', e=>{hueDragging=true;handleHueMove(e);});
+  document.addEventListener('mousemove', e=>{
+    if(svDragging) handleSVMove(e);
+    if(hueDragging) handleHueMove(e);
+  });
+  document.addEventListener('mouseup', ()=>{svDragging=false;hueDragging=false;});
+
+  svBox.addEventListener('touchstart',e=>{e.preventDefault();svDragging=true;handleSVMove(e.touches[0]);},{passive:false});
+  svBox.addEventListener('touchmove',e=>{e.preventDefault();if(svDragging)handleSVMove(e.touches[0]);},{passive:false});
+  svBox.addEventListener('touchend',()=>{svDragging=false;});
+  hueBar.addEventListener('touchstart',e=>{e.preventDefault();hueDragging=true;handleHueMove(e.touches[0]);},{passive:false});
+  hueBar.addEventListener('touchmove',e=>{e.preventDefault();if(hueDragging)handleHueMove(e.touches[0]);},{passive:false});
+  hueBar.addEventListener('touchend',()=>{hueDragging=false;});
+
+  document.getElementById('specHexInput').addEventListener('keydown',e=>{if(e.key==='Enter')applyHexInput();});
+  renderSVBox();
+}
+
+function handleSVMove(e) {
+  const svBox=document.getElementById('svBox');
+  const rect=svBox.getBoundingClientRect();
+  spS=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+  spV=Math.max(0,Math.min(1,1-(e.clientY-rect.top)/rect.height));
+  renderSVBox();
+  applySpectrumColor();
+}
+
+function handleHueMove(e) {
+  const hueBar=document.getElementById('hueBar');
+  const rect=hueBar.getBoundingClientRect();
+  spH=Math.max(0,Math.min(360,((e.clientX-rect.left)/rect.width)*360));
+  renderSVBox();
+  updateHueThumb();
+  applySpectrumColor();
+}
+
+function renderSVBox() {
+  const canvas=document.getElementById('svBox');
+  if(!canvas) return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=`hsl(${spH},100%,50%)`;
+  ctx.fillRect(0,0,W,H);
+  const gS=ctx.createLinearGradient(0,0,W,0);
+  gS.addColorStop(0,'rgba(255,255,255,1)');
+  gS.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=gS; ctx.fillRect(0,0,W,H);
+  const gV=ctx.createLinearGradient(0,0,0,H);
+  gV.addColorStop(0,'rgba(0,0,0,0)');
+  gV.addColorStop(1,'rgba(0,0,0,1)');
+  ctx.fillStyle=gV; ctx.fillRect(0,0,W,H);
+  // cursor
+  const cursor=document.getElementById('svCursor');
+  if(cursor){
+    const wrap=document.querySelector('.sv-box-wrap');
+    const wRect=wrap.getBoundingClientRect();
+    const cRect=canvas.getBoundingClientRect();
+    cursor.style.left=(spS*canvas.offsetWidth)+'px';
+    cursor.style.top=((1-spV)*canvas.offsetHeight)+'px';
+  }
+}
+
+function updateHueThumb() {
+  const thumb=document.getElementById('hueThumb');
+  if(!thumb) return;
+  thumb.style.left=(spH/360*100)+'%';
+  thumb.style.background=`hsl(${spH},100%,50%)`;
+}
+
+function applySpectrumColor() {
+  const [r,g,b]=hsvToRgb(spH,spS,spV);
+  const hex=rgbToHex(r,g,b).toUpperCase();
+  currentHex=hex; selectedColorIndex=-1;
+  document.getElementById('specHexInput').value=hex;
+  document.getElementById('specR').value=r;
+  document.getElementById('specG').value=g;
+  document.getElementById('specB').value=b;
+  updateColorDisplay(hex,hex);
+  document.querySelectorAll('#colorPalette .color-swatch').forEach(s=>s.classList.remove('selected'));
+  document.querySelectorAll('#customPalette .color-swatch').forEach(s=>s.classList.remove('selected'));
+}
+
+function syncSpectrumToHex(hex) {
+  const [r,g,b]=hexToRgb(hex);
+  [spH,spS,spV]=rgbToHsv(r,g,b);
+  renderSVBox(); updateHueThumb();
+  const hi=document.getElementById('specHexInput');
+  if(hi) hi.value=hex.toUpperCase();
+  const sr=document.getElementById('specR'),sg=document.getElementById('specG'),sb=document.getElementById('specB');
+  if(sr){sr.value=r;sg.value=g;sb.value=b;}
+}
+
+function applyHexInput() {
+  let val=document.getElementById('specHexInput').value.trim();
+  if(!val.startsWith('#')) val='#'+val;
+  if(!/^#[0-9a-fA-F]{6}$/.test(val)) return;
+  syncSpectrumToHex(val);
+  applySpectrumColor();
+  addToRecent(val.toUpperCase());
+}
+
+function applyRgbInput() {
+  const r=Math.max(0,Math.min(255,parseInt(document.getElementById('specR').value)||0));
+  const g=Math.max(0,Math.min(255,parseInt(document.getElementById('specG').value)||0));
+  const b=Math.max(0,Math.min(255,parseInt(document.getElementById('specB').value)||0));
+  const hex=rgbToHex(r,g,b).toUpperCase();
+  [spH,spS,spV]=rgbToHsv(r,g,b);
+  renderSVBox(); updateHueThumb();
+  currentHex=hex; selectedColorIndex=-1;
+  document.getElementById('specHexInput').value=hex;
+  updateColorDisplay(hex,hex);
+  document.querySelectorAll('#colorPalette .color-swatch').forEach(s=>s.classList.remove('selected'));
+}
+
+function snapToNearestBead() {
+  const [r,g,b]=hexToRgb(currentHex);
+  const ni=findNearestBeadColor(r,g,b);
+  selectBeadColor(ni);
+  syncSpectrumToHex(BEAD_COLORS[ni].hex);
+  switchPaletteTab('bead');
+}
+
+// =============================================
+// CUSTOM PALETTE
+// =============================================
+function buildCustomPalette() {
+  const el=document.getElementById('customPalette');
+  if(!el) return;
+  el.innerHTML='';
+  customPaletteColors.forEach((hex,i)=>{
+    const sw=document.createElement('div');
+    sw.className='color-swatch';
+    sw.style.background=hex;
+    sw.title=hex+' (右键删除)';
+    sw.onclick=()=>selectCustomColor(hex,sw);
+    sw.oncontextmenu=e=>{e.preventDefault();removeCustomColor(i);};
+    el.appendChild(sw);
+  });
+}
+
+function addCurrentToCustom() {
+  const hex=currentHex.toUpperCase();
+  if(customPaletteColors.includes(hex)){showToast('该颜色已在自定义色板中');return;}
+  customPaletteColors.push(hex);
+  localStorage.setItem('perler_custom',JSON.stringify(customPaletteColors));
+  buildCustomPalette();
+  showToast('✅ 已添加到自定义色板');
+}
+
+function removeCustomColor(i) {
+  customPaletteColors.splice(i,1);
+  localStorage.setItem('perler_custom',JSON.stringify(customPaletteColors));
+  buildCustomPalette();
+}
+
+function clearCustomPalette() {
+  if(!confirm('确定清空自定义色板？')) return;
+  customPaletteColors=[];
+  localStorage.setItem('perler_custom',JSON.stringify(customPaletteColors));
+  buildCustomPalette();
+}
+
+// =============================================
+// RECENT COLORS
+// =============================================
+function addToRecent(hex) {
+  hex=hex.toUpperCase();
+  recentColors=recentColors.filter(c=>c!==hex);
+  recentColors.unshift(hex);
+  recentColors=recentColors.slice(0,12);
+  localStorage.setItem('perler_recent',JSON.stringify(recentColors));
+  buildRecentColors();
+}
+
+function buildRecentColors() {
+  const el=document.getElementById('recentColors');
+  if(!el) return;
+  el.innerHTML=recentColors.map(hex=>
+    `<div class="recent-swatch" style="background:${hex}" title="${hex}" onclick="recentClick('${hex}')"></div>`
+  ).join('');
+}
+
+function recentClick(hex) {
+  syncSpectrumToHex(hex);
+  applySpectrumColor();
+  addToRecent(hex);
+}
+
+// =============================================
+// HSV / RGB CONVERSIONS
+// =============================================
+function hsvToRgb(h,s,v) {
+  const i=Math.floor(h/60)%6, f=h/60-Math.floor(h/60);
+  const p=v*(1-s),q=v*(1-f*s),t=v*(1-(1-f)*s);
+  let r,g,b;
+  switch(i){case 0:r=v;g=t;b=p;break;case 1:r=q;g=v;b=p;break;case 2:r=p;g=v;b=t;break;
+    case 3:r=p;g=q;b=v;break;case 4:r=t;g=p;b=v;break;default:r=v;g=p;b=q;}
+  return [Math.round(r*255),Math.round(g*255),Math.round(b*255)];
+}
+
+function rgbToHsv(r,g,b) {
+  r/=255;g/=255;b/=255;
+  const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;
+  let h=0,s=max===0?0:d/max,v=max;
+  if(d!==0){
+    switch(max){
+      case r:h=((g-b)/d+(g<b?6:0))/6;break;
+      case g:h=((b-r)/d+2)/6;break;
+      case b:h=((r-g)/d+4)/6;break;
+    }
+  }
+  return [h*360,s,v];
 }
 
 // =============================================
@@ -923,7 +1333,7 @@ function renderDesignCanvas() {
       const x = col*cell, y = row*cell;
 
       if(ci >= 0) {
-        const color = BEAD_COLORS[ci].hex;
+        const color = getColorByIndex(ci).hex;
         if(beadStyle) {
           // Draw circle bead
           dctx.beginPath();
@@ -983,15 +1393,21 @@ function isValidPos(x,y) { return x>=0&&x<designWidth&&y>=0&&y<designHeight; }
 function applyTool(x,y) {
   if(!isValidPos(x,y)) return;
   if(currentTool==='pen'){
-    designGrid[y][x] = selectedColorIndex;
+    const ci = selectedColorIndex>=0 ? selectedColorIndex : getOrAddDynamic(currentHex);
+    designGrid[y][x] = ci;
   } else if(currentTool==='eraser'){
     designGrid[y][x] = -1;
   } else if(currentTool==='picker'){
     const ci = designGrid[y][x];
-    if(ci >= 0) selectColor(ci);
-    return;
+    if(ci>=0){
+      const c=getColorByIndex(ci);
+      if(ci<BEAD_COLORS.length) selectBeadColor(ci);
+      else { selectCustomColor(c.hex,null); syncSpectrumToHex(c.hex); switchPaletteTab('spectrum'); }
+    }
+    setTool('pen'); return;
   } else if(currentTool==='fill'){
-    floodFill(x,y, designGrid[y][x], selectedColorIndex);
+    const fillIdx = selectedColorIndex>=0 ? selectedColorIndex : getOrAddDynamic(currentHex);
+    floodFill(x,y, designGrid[y][x], fillIdx);
   }
   renderDesignCanvas();
   updateBOM();
@@ -1145,11 +1561,9 @@ function countBeads() {
 }
 
 function updateBOM() {
-  const counts = new Array(BEAD_COLORS.length).fill(0);
-  designGrid.forEach(row => row.forEach(ci => { if(ci>=0) counts[ci]++; }));
-  const items = BEAD_COLORS.map((c,i)=>({...c,i,count:counts[i]}))
-    .filter(x=>x.count>0)
-    .sort((a,b)=>b.count-a.count);
+  const counts = {};
+  designGrid.forEach(row => row.forEach(ci => { if(ci>=0) counts[ci]=(counts[ci]||0)+1; }));
+  const items = Object.entries(counts).map(([i,count])=>({...getColorByIndex(+i),count})).sort((a,b)=>b.count-a.count);
   
   const total = items.reduce((s,x)=>s+x.count,0);
   document.getElementById('bomTotal').textContent = total+'颗';
@@ -1170,9 +1584,9 @@ function updateBOM() {
 }
 
 function copyBOM() {
-  const counts = new Array(BEAD_COLORS.length).fill(0);
-  designGrid.forEach(row => row.forEach(ci => { if(ci>=0) counts[ci]++; }));
-  const items = BEAD_COLORS.map((c,i)=>({...c,count:counts[i]})).filter(x=>x.count>0).sort((a,b)=>b.count-a.count);
+  const counts = {};
+  designGrid.forEach(row => row.forEach(ci => { if(ci>=0) counts[ci]=(counts[ci]||0)+1; }));
+  const items = Object.entries(counts).map(([i,count])=>({...getColorByIndex(+i),count})).sort((a,b)=>b.count-a.count);
   const text = ['拼豆用料清单','==========', ...items.map(x=>`${x.name} (${x.hex}): ${x.count}颗`)].join('\n');
   navigator.clipboard.writeText(text).then(()=>showToast('✅ 清单已复制'));
 }
@@ -1198,7 +1612,7 @@ function makeExportCanvas(withGrid) {
       const x=col*cellPx, y=row*cellPx;
       ctx.beginPath();
       ctx.arc(x+cellPx/2, y+cellPx/2, cellPx/2-1.5, 0, Math.PI*2);
-      ctx.fillStyle = BEAD_COLORS[ci].hex;
+      ctx.fillStyle = getColorByIndex(ci).hex;
       ctx.fill();
       const grad = ctx.createRadialGradient(x+cellPx*0.35,y+cellPx*0.3,cellPx*0.05,x+cellPx/2,y+cellPx/2,cellPx*0.46);
       grad.addColorStop(0,'rgba(255,255,255,0.3)');

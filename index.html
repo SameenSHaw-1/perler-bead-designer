@@ -546,6 +546,7 @@
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('design')">✏️ 手动设计</button>
     <button class="tab-btn" onclick="switchTab('convert')">🖼️ 图片转图纸</button>
+    <button class="tab-btn" onclick="switchTab('gomoku')">⚫ 五子棋</button>
   </div>
 </header>
 
@@ -626,13 +627,23 @@
         </div>
         <!-- Tabs -->
         <div class="palette-tabs">
-          <div class="palette-tab active" id="ptab-bead"   onclick="switchPaletteTab('bead')">🫘 拼豆色</div>
-          <div class="palette-tab"        id="ptab-spectrum" onclick="switchPaletteTab('spectrum')">🌈 全色谱</div>
+          <div class="palette-tab active" id="ptab-bead"    onclick="switchPaletteTab('bead')">🫘 拼豆</div>
+          <div class="palette-tab"        id="ptab-mard"    onclick="switchPaletteTab('mard')">🎨 Mard</div>
+          <div class="palette-tab"        id="ptab-spectrum" onclick="switchPaletteTab('spectrum')">🌈 色谱</div>
           <div class="palette-tab"        id="ptab-custom"  onclick="switchPaletteTab('custom')">⭐ 自定义</div>
         </div>
         <!-- Bead palette pane -->
         <div id="palettePane-bead">
           <div class="color-palette" id="colorPalette"></div>
+        </div>
+        <!-- Mard palette pane -->
+        <div id="palettePane-mard" style="display:none">
+          <div style="margin-bottom:6px;display:flex;gap:4px;align-items:center">
+            <input type="text" id="mardSearch" placeholder="搜色号/HEX…" oninput="filterMard(this.value)"
+              style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:0.78rem">
+            <span style="font-size:0.72rem;color:var(--text2)" id="mardCount">291</span>
+          </div>
+          <div class="color-palette" id="mardPalette" style="grid-template-columns:repeat(6,1fr);max-height:220px;overflow-y:auto"></div>
         </div>
         <!-- Spectrum picker pane -->
         <div id="palettePane-spectrum" style="display:none">
@@ -848,6 +859,93 @@
 
   </div>
 
+
+  <!-- ===== GOMOKU TAB ===== -->
+  <div id="tab-gomoku" class="tab-content" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;flex-direction:column;gap:0">
+
+    <div style="display:flex;width:100%;height:100%;overflow:hidden">
+
+      <!-- Left: controls -->
+      <div style="width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);padding:20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto">
+        <div style="text-align:center">
+          <div style="font-size:2.5rem">⚫⚪</div>
+          <div style="font-size:1.1rem;font-weight:700;background:linear-gradient(90deg,#f5a623,#e94560);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-top:4px">五子棋</div>
+        </div>
+
+        <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1px solid var(--border)">
+          <div style="font-size:0.78rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">当前状态</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div id="gCurrentBead" style="width:24px;height:24px;border-radius:50%;background:#1a1a1a;border:2px solid #555;flex-shrink:0"></div>
+            <div>
+              <div style="font-size:0.82rem;color:var(--text2)">当前回合</div>
+              <div style="font-weight:600;font-size:0.9rem" id="gCurrentPlayer">黑棋先手</div>
+            </div>
+          </div>
+          <div id="gStatus" style="font-size:0.85rem;color:var(--accent2);font-weight:600;padding:6px 8px;background:rgba(245,166,35,0.1);border-radius:6px;text-align:center">游戏进行中</div>
+        </div>
+
+        <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1px solid var(--border)">
+          <div style="font-size:0.78rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">比分</div>
+          <div style="display:flex;justify-content:space-around;text-align:center">
+            <div>
+              <div style="font-size:1.6rem">⚫</div>
+              <div style="font-weight:700;font-size:1.2rem" id="gBlackScore">0</div>
+              <div style="font-size:0.75rem;color:var(--text2)">黑棋</div>
+            </div>
+            <div style="font-size:1.5rem;color:var(--border);align-self:center">:</div>
+            <div>
+              <div style="font-size:1.6rem">⚪</div>
+              <div style="font-weight:700;font-size:1.2rem" id="gWhiteScore">0</div>
+              <div style="font-size:0.75rem;color:var(--text2)">白棋</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1px solid var(--border)">
+          <div style="font-size:0.78rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">设置</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <label style="font-size:0.82rem;color:var(--text2)">棋盘大小</label>
+            <select id="gBoardSize" onchange="initGomoku()" style="width:80px">
+              <option value="13">13×13</option>
+              <option value="15" selected>15×15</option>
+              <option value="19">19×19</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <label style="font-size:0.82rem;color:var(--text2)">AI 对战</label>
+            <input type="checkbox" id="gAiMode" style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">
+          </div>
+          <div id="gAiDiffRow" style="display:flex;align-items:center;justify-content:space-between">
+            <label style="font-size:0.82rem;color:var(--text2)">AI难度</label>
+            <select id="gAiDiff" style="width:80px">
+              <option value="1">简单</option>
+              <option value="2" selected>普通</option>
+              <option value="3">困难</option>
+            </select>
+          </div>
+        </div>
+
+        <button onclick="initGomoku()" style="background:var(--accent);border:none;color:white;padding:10px;border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600">
+          🔄 重新开始
+        </button>
+        <button onclick="gUndo()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:8px;cursor:pointer;font-size:0.85rem">
+          ↩ 悔棋
+        </button>
+
+        <div style="background:var(--surface2);border-radius:10px;padding:10px;border:1px solid var(--border)">
+          <div style="font-size:0.75rem;color:var(--text2);margin-bottom:6px">最近落子</div>
+          <div id="gMoveHistory" style="font-size:0.75rem;color:var(--text2);max-height:100px;overflow-y:auto;line-height:1.6"></div>
+        </div>
+      </div>
+
+      <!-- Board area -->
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:20px;background:var(--bg)">
+        <canvas id="gomokuCanvas" style="cursor:crosshair;border-radius:4px;box-shadow:0 0 40px rgba(245,166,35,0.15)"></canvas>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 
 <div class="status-bar">
@@ -903,6 +1001,303 @@ const BEAD_COLORS = [
 ];
 
 // =============================================
+// MARD OFFICIAL COLOR PALETTE (291 colors)
+// =============================================
+const MARD_COLORS = [
+  {name:"M-A1",hex:"#FAF4C8",code:"A1"},
+  {name:"M-A10",hex:"#F77C31",code:"A10"},
+  {name:"M-A11",hex:"#FFDD99",code:"A11"},
+  {name:"M-A12",hex:"#FE9F72",code:"A12"},
+  {name:"M-A13",hex:"#FFC365",code:"A13"},
+  {name:"M-A14",hex:"#FD543D",code:"A14"},
+  {name:"M-A15",hex:"#FFF365",code:"A15"},
+  {name:"M-A16",hex:"#FFFF9F",code:"A16"},
+  {name:"M-A17",hex:"#FFE36E",code:"A17"},
+  {name:"M-A18",hex:"#FEBE7D",code:"A18"},
+  {name:"M-A19",hex:"#FD7C72",code:"A19"},
+  {name:"M-A2",hex:"#FFFFD5",code:"A2"},
+  {name:"M-A20",hex:"#FFD568",code:"A20"},
+  {name:"M-A21",hex:"#FFE395",code:"A21"},
+  {name:"M-A22",hex:"#F4F57D",code:"A22"},
+  {name:"M-A23",hex:"#E6C9B7",code:"A23"},
+  {name:"M-A24",hex:"#F7F8A2",code:"A24"},
+  {name:"M-A25",hex:"#FFD67D",code:"A25"},
+  {name:"M-A26",hex:"#FFC830",code:"A26"},
+  {name:"M-A3",hex:"#FEFF8B",code:"A3"},
+  {name:"M-A4",hex:"#FBED56",code:"A4"},
+  {name:"M-A5",hex:"#F4D738",code:"A5"},
+  {name:"M-A6",hex:"#FEAC4C",code:"A6"},
+  {name:"M-A7",hex:"#FE8B4C",code:"A7"},
+  {name:"M-A8",hex:"#FFDA45",code:"A8"},
+  {name:"M-A9",hex:"#FF995B",code:"A9"},
+  {name:"M-B1",hex:"#E6EE31",code:"B1"},
+  {name:"M-B10",hex:"#95D3C2",code:"B10"},
+  {name:"M-B11",hex:"#5D722A",code:"B11"},
+  {name:"M-B12",hex:"#166F41",code:"B12"},
+  {name:"M-B13",hex:"#CAEB7B",code:"B13"},
+  {name:"M-B14",hex:"#ADE946",code:"B14"},
+  {name:"M-B15",hex:"#2E5132",code:"B15"},
+  {name:"M-B16",hex:"#C5ED9C",code:"B16"},
+  {name:"M-B17",hex:"#9BB13A",code:"B17"},
+  {name:"M-B18",hex:"#E6EE49",code:"B18"},
+  {name:"M-B19",hex:"#24B88C",code:"B19"},
+  {name:"M-B2",hex:"#63F347",code:"B2"},
+  {name:"M-B20",hex:"#C2F0CC",code:"B20"},
+  {name:"M-B21",hex:"#156A6B",code:"B21"},
+  {name:"M-B22",hex:"#0B3C43",code:"B22"},
+  {name:"M-B23",hex:"#303A21",code:"B23"},
+  {name:"M-B24",hex:"#EEFCA5",code:"B24"},
+  {name:"M-B25",hex:"#4E846D",code:"B25"},
+  {name:"M-B26",hex:"#8D7A35",code:"B26"},
+  {name:"M-B27",hex:"#CCE1AF",code:"B27"},
+  {name:"M-B28",hex:"#9EE5B9",code:"B28"},
+  {name:"M-B29",hex:"#C5E254",code:"B29"},
+  {name:"M-B3",hex:"#9EF780",code:"B3"},
+  {name:"M-B30",hex:"#E2FCB1",code:"B30"},
+  {name:"M-B31",hex:"#B0E792",code:"B31"},
+  {name:"M-B32",hex:"#9CAB5A",code:"B32"},
+  {name:"M-B4",hex:"#5DE035",code:"B4"},
+  {name:"M-B5",hex:"#35E352",code:"B5"},
+  {name:"M-B6",hex:"#65E2A6",code:"B6"},
+  {name:"M-B7",hex:"#3DAF80",code:"B7"},
+  {name:"M-B8",hex:"#1C9C4F",code:"B8"},
+  {name:"M-B9",hex:"#27523A",code:"B9"},
+  {name:"M-C1",hex:"#E8FFE7",code:"C1"},
+  {name:"M-C10",hex:"#3EBCE2",code:"C10"},
+  {name:"M-C11",hex:"#28DDDE",code:"C11"},
+  {name:"M-C12",hex:"#1C334D",code:"C12"},
+  {name:"M-C13",hex:"#CDE8FF",code:"C13"},
+  {name:"M-C14",hex:"#D5FDFF",code:"C14"},
+  {name:"M-C15",hex:"#22C4C6",code:"C15"},
+  {name:"M-C16",hex:"#1557A8",code:"C16"},
+  {name:"M-C17",hex:"#04D1F6",code:"C17"},
+  {name:"M-C18",hex:"#1D3344",code:"C18"},
+  {name:"M-C19",hex:"#1887A2",code:"C19"},
+  {name:"M-C2",hex:"#A9F9FC",code:"C2"},
+  {name:"M-C20",hex:"#176DAF",code:"C20"},
+  {name:"M-C21",hex:"#BEDDFF",code:"C21"},
+  {name:"M-C22",hex:"#67B4BE",code:"C22"},
+  {name:"M-C23",hex:"#C8E2FF",code:"C23"},
+  {name:"M-C24",hex:"#7CC4FF",code:"C24"},
+  {name:"M-C25",hex:"#A9E5E5",code:"C25"},
+  {name:"M-C26",hex:"#3CAED8",code:"C26"},
+  {name:"M-C27",hex:"#D3DFFA",code:"C27"},
+  {name:"M-C28",hex:"#BBCFED",code:"C28"},
+  {name:"M-C29",hex:"#34488E",code:"C29"},
+  {name:"M-C3",hex:"#A0E2FB",code:"C3"},
+  {name:"M-C4",hex:"#41CCFF",code:"C4"},
+  {name:"M-C5",hex:"#01ACEB",code:"C5"},
+  {name:"M-C6",hex:"#50AAF0",code:"C6"},
+  {name:"M-C7",hex:"#3677D2",code:"C7"},
+  {name:"M-C8",hex:"#0F54C0",code:"C8"},
+  {name:"M-C9",hex:"#324BCA",code:"C9"},
+  {name:"M-D1",hex:"#AEB4F2",code:"D1"},
+  {name:"M-D10",hex:"#361851",code:"D10"},
+  {name:"M-D11",hex:"#B9BAE1",code:"D11"},
+  {name:"M-D12",hex:"#DE9AD4",code:"D12"},
+  {name:"M-D13",hex:"#B90095",code:"D13"},
+  {name:"M-D14",hex:"#8B279B",code:"D14"},
+  {name:"M-D15",hex:"#2F1F90",code:"D15"},
+  {name:"M-D16",hex:"#E3E1EE",code:"D16"},
+  {name:"M-D17",hex:"#C4D4F6",code:"D17"},
+  {name:"M-D18",hex:"#A45EC7",code:"D18"},
+  {name:"M-D19",hex:"#D8C3D7",code:"D19"},
+  {name:"M-D2",hex:"#858EDD",code:"D2"},
+  {name:"M-D20",hex:"#9C32B2",code:"D20"},
+  {name:"M-D21",hex:"#9A009B",code:"D21"},
+  {name:"M-D22",hex:"#333A95",code:"D22"},
+  {name:"M-D23",hex:"#EBDAFC",code:"D23"},
+  {name:"M-D24",hex:"#7786E5",code:"D24"},
+  {name:"M-D25",hex:"#494FC7",code:"D25"},
+  {name:"M-D26",hex:"#DFC2F8",code:"D26"},
+  {name:"M-D3",hex:"#2F54AF",code:"D3"},
+  {name:"M-D4",hex:"#182A84",code:"D4"},
+  {name:"M-D5",hex:"#B843C5",code:"D5"},
+  {name:"M-D6",hex:"#AC7BDE",code:"D6"},
+  {name:"M-D7",hex:"#8854B3",code:"D7"},
+  {name:"M-D8",hex:"#E2D3FF",code:"D8"},
+  {name:"M-D9",hex:"#D5B9F8",code:"D9"},
+  {name:"M-E1",hex:"#FDD3CC",code:"E1"},
+  {name:"M-E10",hex:"#D33793",code:"E10"},
+  {name:"M-E11",hex:"#FCDDD2",code:"E11"},
+  {name:"M-E12",hex:"#F78FC3",code:"E12"},
+  {name:"M-E13",hex:"#B5006D",code:"E13"},
+  {name:"M-E14",hex:"#FFD1BA",code:"E14"},
+  {name:"M-E15",hex:"#F8C7C9",code:"E15"},
+  {name:"M-E16",hex:"#FFF3EB",code:"E16"},
+  {name:"M-E17",hex:"#FFE2EA",code:"E17"},
+  {name:"M-E18",hex:"#FFC7DB",code:"E18"},
+  {name:"M-E19",hex:"#FEBAD5",code:"E19"},
+  {name:"M-E2",hex:"#FEC0DF",code:"E2"},
+  {name:"M-E20",hex:"#D8C7D1",code:"E20"},
+  {name:"M-E21",hex:"#BD9DA1",code:"E21"},
+  {name:"M-E22",hex:"#B785A1",code:"E22"},
+  {name:"M-E23",hex:"#937A8D",code:"E23"},
+  {name:"M-E24",hex:"#E1BCE8",code:"E24"},
+  {name:"M-E3",hex:"#FFB7E7",code:"E3"},
+  {name:"M-E4",hex:"#E8649E",code:"E4"},
+  {name:"M-E5",hex:"#F551A2",code:"E5"},
+  {name:"M-E6",hex:"#F13D74",code:"E6"},
+  {name:"M-E7",hex:"#C63478",code:"E7"},
+  {name:"M-E8",hex:"#FFDBE9",code:"E8"},
+  {name:"M-E9",hex:"#E970CC",code:"E9"},
+  {name:"M-F1",hex:"#FD957B",code:"F1"},
+  {name:"M-F10",hex:"#8A4526",code:"F10"},
+  {name:"M-F11",hex:"#5A2121",code:"F11"},
+  {name:"M-F12",hex:"#FD4E6A",code:"F12"},
+  {name:"M-F13",hex:"#F35744",code:"F13"},
+  {name:"M-F14",hex:"#FFA9AD",code:"F14"},
+  {name:"M-F15",hex:"#D30022",code:"F15"},
+  {name:"M-F16",hex:"#FEC2A6",code:"F16"},
+  {name:"M-F17",hex:"#E69C79",code:"F17"},
+  {name:"M-F18",hex:"#D37C46",code:"F18"},
+  {name:"M-F19",hex:"#C1444A",code:"F19"},
+  {name:"M-F2",hex:"#FC3D46",code:"F2"},
+  {name:"M-F20",hex:"#CD9391",code:"F20"},
+  {name:"M-F21",hex:"#F7B4C6",code:"F21"},
+  {name:"M-F22",hex:"#FDC0D0",code:"F22"},
+  {name:"M-F23",hex:"#F67E66",code:"F23"},
+  {name:"M-F24",hex:"#E698AA",code:"F24"},
+  {name:"M-F25",hex:"#E54B4F",code:"F25"},
+  {name:"M-F3",hex:"#F74941",code:"F3"},
+  {name:"M-F4",hex:"#FC283C",code:"F4"},
+  {name:"M-F5",hex:"#E7002F",code:"F5"},
+  {name:"M-F6",hex:"#943630",code:"F6"},
+  {name:"M-F7",hex:"#971937",code:"F7"},
+  {name:"M-F8",hex:"#BC0028",code:"F8"},
+  {name:"M-F9",hex:"#E2677A",code:"F9"},
+  {name:"M-G1",hex:"#FFE2CE",code:"G1"},
+  {name:"M-G10",hex:"#D98C39",code:"G10"},
+  {name:"M-G11",hex:"#E0C593",code:"G11"},
+  {name:"M-G12",hex:"#FFC890",code:"G12"},
+  {name:"M-G13",hex:"#B7714A",code:"G13"},
+  {name:"M-G14",hex:"#8D614C",code:"G14"},
+  {name:"M-G15",hex:"#FCF9E0",code:"G15"},
+  {name:"M-G16",hex:"#F2D9BA",code:"G16"},
+  {name:"M-G17",hex:"#78524B",code:"G17"},
+  {name:"M-G18",hex:"#FFE4CC",code:"G18"},
+  {name:"M-G19",hex:"#E07935",code:"G19"},
+  {name:"M-G2",hex:"#FFC4AA",code:"G2"},
+  {name:"M-G20",hex:"#A94023",code:"G20"},
+  {name:"M-G21",hex:"#B88558",code:"G21"},
+  {name:"M-G3",hex:"#F4C3A5",code:"G3"},
+  {name:"M-G4",hex:"#E1B383",code:"G4"},
+  {name:"M-G5",hex:"#EDB045",code:"G5"},
+  {name:"M-G6",hex:"#E99C17",code:"G6"},
+  {name:"M-G7",hex:"#9D5B3E",code:"G7"},
+  {name:"M-G8",hex:"#753832",code:"G8"},
+  {name:"M-G9",hex:"#E6B483",code:"G9"},
+  {name:"M-H1",hex:"#FDFBFF",code:"H1"},
+  {name:"M-H10",hex:"#EEE9EA",code:"H10"},
+  {name:"M-H11",hex:"#CECDD5",code:"H11"},
+  {name:"M-H12",hex:"#FFF5ED",code:"H12"},
+  {name:"M-H13",hex:"#F5ECD2",code:"H13"},
+  {name:"M-H14",hex:"#CFD7D3",code:"H14"},
+  {name:"M-H15",hex:"#98A6A8",code:"H15"},
+  {name:"M-H16",hex:"#1D1414",code:"H16"},
+  {name:"M-H17",hex:"#F1EDED",code:"H17"},
+  {name:"M-H18",hex:"#FFFDF0",code:"H18"},
+  {name:"M-H19",hex:"#F6EFE2",code:"H19"},
+  {name:"M-H2",hex:"#FEFFFF",code:"H2"},
+  {name:"M-H20",hex:"#949FA3",code:"H20"},
+  {name:"M-H21",hex:"#FFFBE1",code:"H21"},
+  {name:"M-H22",hex:"#CACAD4",code:"H22"},
+  {name:"M-H23",hex:"#9A9D94",code:"H23"},
+  {name:"M-H3",hex:"#B6B1BA",code:"H3"},
+  {name:"M-H4",hex:"#89858C",code:"H4"},
+  {name:"M-H5",hex:"#48464E",code:"H5"},
+  {name:"M-H6",hex:"#2F2B2F",code:"H6"},
+  {name:"M-H7",hex:"#000000",code:"H7"},
+  {name:"M-H8",hex:"#E7D6DB",code:"H8"},
+  {name:"M-H9",hex:"#EDEDED",code:"H9"},
+  {name:"M-M1",hex:"#BCC6B8",code:"M1"},
+  {name:"M-M10",hex:"#C5B2BC",code:"M10"},
+  {name:"M-M11",hex:"#9F7594",code:"M11"},
+  {name:"M-M12",hex:"#644749",code:"M12"},
+  {name:"M-M13",hex:"#D19066",code:"M13"},
+  {name:"M-M14",hex:"#C77362",code:"M14"},
+  {name:"M-M15",hex:"#757D78",code:"M15"},
+  {name:"M-M2",hex:"#8AA386",code:"M2"},
+  {name:"M-M3",hex:"#697D80",code:"M3"},
+  {name:"M-M4",hex:"#E3D2BC",code:"M4"},
+  {name:"M-M5",hex:"#D0CCAA",code:"M5"},
+  {name:"M-M6",hex:"#B0A782",code:"M6"},
+  {name:"M-M7",hex:"#B4A497",code:"M7"},
+  {name:"M-M8",hex:"#B38281",code:"M8"},
+  {name:"M-M9",hex:"#A58767",code:"M9"},
+  {name:"M-P1",hex:"#FCF7F8",code:"P1"},
+  {name:"M-P10",hex:"#D9C7EA",code:"P10"},
+  {name:"M-P11",hex:"#F3ECC9",code:"P11"},
+  {name:"M-P12",hex:"#E6EEF2",code:"P12"},
+  {name:"M-P13",hex:"#AACBEF",code:"P13"},
+  {name:"M-P14",hex:"#337680",code:"P14"},
+  {name:"M-P15",hex:"#668575",code:"P15"},
+  {name:"M-P16",hex:"#FEBF45",code:"P16"},
+  {name:"M-P17",hex:"#FEA324",code:"P17"},
+  {name:"M-P18",hex:"#FEB89F",code:"P18"},
+  {name:"M-P19",hex:"#FFFEEC",code:"P19"},
+  {name:"M-P2",hex:"#B0A9AC",code:"P2"},
+  {name:"M-P20",hex:"#FEBECF",code:"P20"},
+  {name:"M-P21",hex:"#ECBEBF",code:"P21"},
+  {name:"M-P22",hex:"#E4A89F",code:"P22"},
+  {name:"M-P23",hex:"#A56268",code:"P23"},
+  {name:"M-P3",hex:"#AFDCAB",code:"P3"},
+  {name:"M-P4",hex:"#FEA49F",code:"P4"},
+  {name:"M-P5",hex:"#EE8C3E",code:"P5"},
+  {name:"M-P6",hex:"#5FD0A7",code:"P6"},
+  {name:"M-P7",hex:"#EB9270",code:"P7"},
+  {name:"M-P8",hex:"#F0D958",code:"P8"},
+  {name:"M-P9",hex:"#D9D9D9",code:"P9"},
+  {name:"M-Q1",hex:"#F2A5E8",code:"Q1"},
+  {name:"M-Q2",hex:"#E9EC91",code:"Q2"},
+  {name:"M-Q3",hex:"#FFFF00",code:"Q3"},
+  {name:"M-Q4",hex:"#FFEBFA",code:"Q4"},
+  {name:"M-Q5",hex:"#76CEDE",code:"Q5"},
+  {name:"M-R1",hex:"#D50D21",code:"R1"},
+  {name:"M-R10",hex:"#FFDB4C",code:"R10"},
+  {name:"M-R11",hex:"#FFEBFA",code:"R11"},
+  {name:"M-R12",hex:"#D8D5CE",code:"R12"},
+  {name:"M-R13",hex:"#55514C",code:"R13"},
+  {name:"M-R14",hex:"#9FE4DF",code:"R14"},
+  {name:"M-R15",hex:"#77CEE9",code:"R15"},
+  {name:"M-R16",hex:"#3ECFCA",code:"R16"},
+  {name:"M-R17",hex:"#4A867A",code:"R17"},
+  {name:"M-R18",hex:"#7FCD9D",code:"R18"},
+  {name:"M-R19",hex:"#CDE55D",code:"R19"},
+  {name:"M-R2",hex:"#F92F83",code:"R2"},
+  {name:"M-R20",hex:"#E8C7B4",code:"R20"},
+  {name:"M-R21",hex:"#AD6F3C",code:"R21"},
+  {name:"M-R22",hex:"#6C372F",code:"R22"},
+  {name:"M-R23",hex:"#FEB872",code:"R23"},
+  {name:"M-R24",hex:"#F3C1C0",code:"R24"},
+  {name:"M-R25",hex:"#C9675E",code:"R25"},
+  {name:"M-R26",hex:"#D293BE",code:"R26"},
+  {name:"M-R27",hex:"#EA8CB1",code:"R27"},
+  {name:"M-R28",hex:"#9C87D6",code:"R28"},
+  {name:"M-R3",hex:"#FD8324",code:"R3"},
+  {name:"M-R4",hex:"#F8EC31",code:"R4"},
+  {name:"M-R5",hex:"#35C75B",code:"R5"},
+  {name:"M-R6",hex:"#238891",code:"R6"},
+  {name:"M-R7",hex:"#19779D",code:"R7"},
+  {name:"M-R8",hex:"#1A60C3",code:"R8"},
+  {name:"M-R9",hex:"#9A56B4",code:"R9"},
+  {name:"M-T1",hex:"#FFFFFF",code:"T1"},
+  {name:"M-Y1",hex:"#FD6FB4",code:"Y1"},
+  {name:"M-Y2",hex:"#FEB481",code:"Y2"},
+  {name:"M-Y3",hex:"#D7FAA0",code:"Y3"},
+  {name:"M-Y4",hex:"#8BDBFA",code:"Y4"},
+  {name:"M-Y5",hex:"#E987EA",code:"Y5"},
+  {name:"M-ZG1",hex:"#DAABB3",code:"ZG1"},
+  {name:"M-ZG2",hex:"#D6AA87",code:"ZG2"},
+  {name:"M-ZG3",hex:"#C1BD8D",code:"ZG3"},
+  {name:"M-ZG4",hex:"#96869F",code:"ZG4"},
+  {name:"M-ZG5",hex:"#8490A6",code:"ZG5"},
+  {name:"M-ZG6",hex:"#94BFE2",code:"ZG6"},
+  {name:"M-ZG7",hex:"#E2A9D2",code:"ZG7"},
+  {name:"M-ZG8",hex:"#AB91C0",code:"ZG8"},
+];
+
+// =============================================
 // UTILITY
 // =============================================
 function hexToRgb(hex) {
@@ -943,11 +1338,13 @@ function showToast(msg) {
 // =============================================
 function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    b.classList.toggle('active', ['design','convert'][i] === tab);
+    b.classList.toggle('active', ['design','convert','gomoku'][i] === tab);
   });
   document.getElementById('tab-design').style.display = tab==='design' ? 'flex' : 'none';
   document.getElementById('tab-convert').style.display = tab==='convert' ? 'flex' : 'none';
+  document.getElementById('tab-gomoku').style.display = tab==='gomoku' ? 'flex' : 'none';
   if(tab==='design') renderDesignCanvas();
+  if(tab==='gomoku') { if(!gInitialized) initGomoku(); else renderGomoku(); }
 }
 
 // =============================================
@@ -1040,13 +1437,14 @@ function getActiveColor() { return currentHex; }
 // =============================================
 function switchPaletteTab(tab) {
   currentPaletteTab = tab;
-  ['bead','spectrum','custom'].forEach(t=>{
+  ['bead','mard','spectrum','custom'].forEach(t=>{
     const tb=document.getElementById('ptab-'+t);
     const pn=document.getElementById('palettePane-'+t);
     if(tb) tb.classList.toggle('active',t===tab);
     if(pn) pn.style.display=t===tab?'block':'none';
   });
   if(tab==='spectrum') { renderSVBox(); updateHueThumb(); }
+  if(tab==='mard') buildMardPalette();
 }
 
 // =============================================
@@ -1179,6 +1577,44 @@ function snapToNearestBead() {
   selectBeadColor(ni);
   syncSpectrumToHex(BEAD_COLORS[ni].hex);
   switchPaletteTab('bead');
+}
+
+// =============================================
+// MARD PALETTE
+// =============================================
+let mardBuilt = false;
+function buildMardPalette(filter='') {
+  const el=document.getElementById('mardPalette');
+  const countEl=document.getElementById('mardCount');
+  if(!el) return;
+  const q=filter.trim().toLowerCase();
+  const filtered = q ? MARD_COLORS.filter(c=>
+    c.code.toLowerCase().includes(q) || c.hex.toLowerCase().includes(q)
+  ) : MARD_COLORS;
+  if(countEl) countEl.textContent=filtered.length;
+  el.innerHTML='';
+  filtered.forEach(c=>{
+    const sw=document.createElement('div');
+    sw.className='color-swatch';
+    sw.style.background=c.hex;
+    sw.title=c.code+' '+c.hex;
+    sw.onclick=()=>selectMardColor(c);
+    el.appendChild(sw);
+  });
+  mardBuilt=true;
+}
+
+function filterMard(val) { buildMardPalette(val); }
+
+function selectMardColor(c) {
+  selectedColorIndex = -1;
+  currentHex = c.hex.toUpperCase();
+  updateColorDisplay('M-'+c.code+' '+c.hex, c.hex);
+  document.querySelectorAll('#colorPalette .color-swatch').forEach(s=>s.classList.remove('selected'));
+  document.querySelectorAll('#customPalette .color-swatch').forEach(s=>s.classList.remove('selected'));
+  addToRecent(c.hex);
+  syncSpectrumToHex(c.hex);
+  if(currentTool==='picker') setTool('pen');
 }
 
 // =============================================
@@ -1885,6 +2321,283 @@ function sendToDesign() {
   renderDesignCanvas();
   updateBOM();
   showToast('✅ 已发送到设计器');
+}
+
+// =============================================
+// GOMOKU GAME
+// =============================================
+let gBoard=[], gCurrent=1, gOver=false, gInitialized=false;
+let gBlackScore=0, gWhiteScore=0, gHistory=[], gMoveLog=[];
+let gSize=15;
+
+function initGomoku() {
+  gSize = parseInt(document.getElementById('gBoardSize').value)||15;
+  gBoard = Array.from({length:gSize},()=>Array(gSize).fill(0));
+  gCurrent=1; gOver=false; gHistory=[]; gMoveLog=[];
+  gInitialized=true;
+  document.getElementById('gMoveHistory').innerHTML='';
+  updateGomokuStatus();
+  renderGomoku();
+}
+
+const gomokuCanvas=document.getElementById('gomokuCanvas');
+const gctx=gomokuCanvas.getContext('2d');
+
+function getCellPx() {
+  const area=Math.min(window.innerWidth-300,window.innerHeight-120,600);
+  return Math.floor(area/(gSize+1));
+}
+
+function renderGomoku() {
+  const cell=getCellPx();
+  const pad=cell;
+  const size=(gSize-1)*cell+pad*2;
+  gomokuCanvas.width=size; gomokuCanvas.height=size;
+
+  // Board background
+  const bg=gctx.createLinearGradient(0,0,size,size);
+  bg.addColorStop(0,'#d4a84b'); bg.addColorStop(1,'#b8892e');
+  gctx.fillStyle=bg;
+  gctx.fillRect(0,0,size,size);
+
+  // Grid lines
+  gctx.strokeStyle='rgba(0,0,0,0.35)';
+  gctx.lineWidth=0.8;
+  for(let i=0;i<gSize;i++){
+    gctx.beginPath();
+    gctx.moveTo(pad+i*cell,pad);
+    gctx.lineTo(pad+i*cell,pad+(gSize-1)*cell);
+    gctx.stroke();
+    gctx.beginPath();
+    gctx.moveTo(pad,pad+i*cell);
+    gctx.lineTo(pad+(gSize-1)*cell,pad+i*cell);
+    gctx.stroke();
+  }
+
+  // Star points
+  const stars = gSize===15 ? [[3,3],[3,11],[7,7],[11,3],[11,11]] :
+                gSize===19 ? [[3,3],[3,9],[3,15],[9,3],[9,9],[9,15],[15,3],[15,9],[15,15]] :
+                [[3,3],[3,9],[6,6],[9,3],[9,9]];
+  stars.forEach(([r,c])=>{
+    gctx.beginPath();
+    gctx.arc(pad+c*cell, pad+r*cell, cell*0.12, 0, Math.PI*2);
+    gctx.fillStyle='rgba(0,0,0,0.5)'; gctx.fill();
+  });
+
+  // Pieces
+  for(let r=0;r<gSize;r++){
+    for(let c=0;c<gSize;c++){
+      const p=gBoard[r][c];
+      if(!p) continue;
+      const x=pad+c*cell, y=pad+r*cell, rad=cell*0.44;
+      gctx.beginPath(); gctx.arc(x,y,rad,0,Math.PI*2);
+      if(p===1){
+        const g=gctx.createRadialGradient(x-rad*0.3,y-rad*0.3,rad*0.05,x,y,rad);
+        g.addColorStop(0,'#555'); g.addColorStop(1,'#0a0a0a');
+        gctx.fillStyle=g;
+      } else {
+        const g=gctx.createRadialGradient(x-rad*0.3,y-rad*0.3,rad*0.05,x,y,rad);
+        g.addColorStop(0,'#ffffff'); g.addColorStop(1,'#ccc');
+        gctx.fillStyle=g;
+      }
+      gctx.fill();
+      gctx.strokeStyle=p===1?'rgba(0,0,0,0.8)':'rgba(180,180,180,0.6)';
+      gctx.lineWidth=0.5; gctx.stroke();
+    }
+  }
+
+  // Last move indicator
+  if(gHistory.length){
+    const last=gHistory[gHistory.length-1];
+    const x=pad+last.c*cell, y=pad+last.r*cell;
+    gctx.beginPath();
+    gctx.arc(x,y,cell*0.15,0,Math.PI*2);
+    gctx.fillStyle=last.p===1?'rgba(255,100,100,0.8)':'rgba(100,100,200,0.8)';
+    gctx.fill();
+  }
+
+  // Win highlight
+  if(gOver && gWinLine){
+    gctx.strokeStyle='#e94560';
+    gctx.lineWidth=cell*0.15;
+    gctx.lineCap='round';
+    gctx.beginPath();
+    gctx.moveTo(pad+gWinLine[0].c*cell, pad+gWinLine[0].r*cell);
+    gctx.lineTo(pad+gWinLine[4].c*cell, pad+gWinLine[4].r*cell);
+    gctx.stroke();
+  }
+}
+
+let gWinLine=null;
+
+gomokuCanvas.addEventListener('click', e=>{
+  if(gOver) return;
+  const cell=getCellPx(), pad=cell;
+  const rect=gomokuCanvas.getBoundingClientRect();
+  const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  const c=Math.round((x-pad)/cell), r=Math.round((y-pad)/cell);
+  if(c<0||c>=gSize||r<0||r>=gSize||gBoard[r][c]) return;
+  placeStone(r,c);
+  // AI move
+  if(!gOver && document.getElementById('gAiMode').checked && gCurrent===2){
+    setTimeout(aiMove,200);
+  }
+});
+
+function placeStone(r,c) {
+  gBoard[r][c]=gCurrent;
+  gHistory.push({r,c,p:gCurrent});
+  const col='ABCDEFGHJKLMNOPQRST'[c];
+  gMoveLog.push((gCurrent===1?'⚫':'⚪')+' '+col+(gSize-r));
+  const el=document.getElementById('gMoveHistory');
+  el.innerHTML=gMoveLog.slice(-10).reverse().map(m=>`<div>${m}</div>`).join('');
+  const win=checkWin(r,c,gCurrent);
+  if(win){
+    gWinLine=win;
+    gOver=true;
+    if(gCurrent===1) gBlackScore++; else gWhiteScore++;
+    document.getElementById('gBlackScore').textContent=gBlackScore;
+    document.getElementById('gWhiteScore').textContent=gWhiteScore;
+    document.getElementById('gStatus').textContent=(gCurrent===1?'⚫ 黑棋':'⚪ 白棋')+' 获胜！🎉';
+    document.getElementById('gStatus').style.background='rgba(233,69,96,0.2)';
+    document.getElementById('gStatus').style.color='var(--accent)';
+  } else {
+    gCurrent=gCurrent===1?2:1;
+    updateGomokuStatus();
+  }
+  renderGomoku();
+}
+
+function updateGomokuStatus() {
+  const name=gCurrent===1?'⚫ 黑棋先手':'⚪ 白棋';
+  document.getElementById('gCurrentPlayer').textContent=name;
+  document.getElementById('gCurrentBead').style.background=gCurrent===1?'#1a1a1a':'#f0f0f0';
+  document.getElementById('gStatus').textContent='游戏进行中';
+  document.getElementById('gStatus').style.background='rgba(245,166,35,0.1)';
+  document.getElementById('gStatus').style.color='var(--accent2)';
+  document.getElementById('gWinLine')?null:null;
+  gWinLine=null;
+}
+
+function checkWin(r,c,player) {
+  const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+  for(const [dr,dc] of dirs){
+    const line=[{r,c}];
+    for(let d=1;d<5;d++){
+      const nr=r+dr*d, nc=c+dc*d;
+      if(nr<0||nr>=gSize||nc<0||nc>=gSize||gBoard[nr][nc]!==player) break;
+      line.push({r:nr,c:nc});
+    }
+    for(let d=1;d<5;d++){
+      const nr=r-dr*d, nc=c-dc*d;
+      if(nr<0||nr>=gSize||nc<0||nc>=gSize||gBoard[nr][nc]!==player) break;
+      line.push({r:nr,c:nc});
+    }
+    if(line.length>=5) return line.slice(0,5);
+  }
+  return null;
+}
+
+function gUndo() {
+  if(!gHistory.length) return;
+  const last=gHistory.pop();
+  gBoard[last.r][last.c]=0;
+  gMoveLog.pop();
+  // If AI mode, undo two moves
+  if(document.getElementById('gAiMode').checked && gHistory.length && gHistory[gHistory.length-1].p!==last.p){
+    const prev=gHistory.pop();
+    gBoard[prev.r][prev.c]=0;
+    gMoveLog.pop();
+  }
+  gCurrent=gHistory.length?( gHistory[gHistory.length-1].p===1?2:1 ):1;
+  gOver=false; gWinLine=null;
+  document.getElementById('gMoveHistory').innerHTML=gMoveLog.slice(-10).reverse().map(m=>`<div>${m}</div>`).join('');
+  updateGomokuStatus();
+  renderGomoku();
+}
+
+// =============================================
+// SIMPLE AI
+// =============================================
+function aiMove() {
+  if(gOver) return;
+  const diff=parseInt(document.getElementById('gAiDiff').value);
+  let best=null;
+  if(diff===1){
+    // Random from available
+    const moves=[];
+    for(let r=0;r<gSize;r++) for(let c=0;c<gSize;c++) if(!gBoard[r][c]) moves.push({r,c});
+    best=moves[Math.floor(Math.random()*moves.length)];
+  } else {
+    best=getBestMove(diff===3?3:2);
+  }
+  if(best) placeStone(best.r,best.c);
+}
+
+function scorePos(r,c,player) {
+  const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+  let total=0;
+  for(const [dr,dc] of dirs){
+    let count=1,blocked=0;
+    for(let d=1;d<5;d++){
+      const nr=r+dr*d,nc=c+dc*d;
+      if(nr<0||nr>=gSize||nc<0||nc>=gSize){blocked++;break;}
+      if(gBoard[nr][nc]===player) count++;
+      else if(gBoard[nr][nc]!==0){blocked++;break;}
+      else break;
+    }
+    for(let d=1;d<5;d++){
+      const nr=r-dr*d,nc=c-dc*d;
+      if(nr<0||nr>=gSize||nc<0||nc>=gSize){blocked++;break;}
+      if(gBoard[nr][nc]===player) count++;
+      else if(gBoard[nr][nc]!==0){blocked++;break;}
+      else break;
+    }
+    const scoreMap=[0,1,10,100,1000,100000];
+    const s=scoreMap[Math.min(count,5)];
+    total+=blocked===2?s*0.1:s;
+  }
+  return total;
+}
+
+function getBestMove(depth) {
+  let best=null,bestScore=-Infinity;
+  const candidates=getCandidates();
+  for(const {r,c} of candidates){
+    // Win immediately
+    gBoard[r][c]=2;
+    if(checkWin(r,c,2)){gBoard[r][c]=0;return{r,c};}
+    gBoard[r][c]=0;
+    // Block opponent win
+    gBoard[r][c]=1;
+    if(checkWin(r,c,1)){gBoard[r][c]=0;best={r,c};bestScore=99999;}
+    gBoard[r][c]=0;
+  }
+  if(best&&bestScore===99999) return best;
+  for(const {r,c} of candidates){
+    const atk=scorePos(r,c,2)*1.1;
+    const def=scorePos(r,c,1);
+    const score=atk+def;
+    if(score>bestScore){bestScore=score;best={r,c};}
+  }
+  return best||candidates[0];
+}
+
+function getCandidates() {
+  const cands=new Set();
+  let hasStone=false;
+  for(let r=0;r<gSize;r++){
+    for(let c=0;c<gSize;c++){
+      if(!gBoard[r][c]) continue;
+      hasStone=true;
+      for(let dr=-2;dr<=2;dr++) for(let dc=-2;dc<=2;dc++){
+        const nr=r+dr,nc=c+dc;
+        if(nr>=0&&nr<gSize&&nc>=0&&nc<gSize&&!gBoard[nr][nc]) cands.add(nr*gSize+nc);
+      }
+    }
+  }
+  if(!hasStone) return [{r:Math.floor(gSize/2),c:Math.floor(gSize/2)}];
+  return [...cands].map(k=>({r:Math.floor(k/gSize),c:k%gSize}));
 }
 
 // =============================================
